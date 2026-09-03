@@ -1,0 +1,50 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background); --color-foreground: var(--foreground);
+  --color-card: var(--card); --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover); --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary); --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary); --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted); --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent); --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive); --color-border: var(--border); --color-input: var(--input); --color-ring: var(--ring);
+  --font-sans: "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-serif: "Noto Serif SC", "Songti SC", SimSun, serif;
+  --radius-lg: var(--radius); --radius-xl: calc(var(--radius) * 1.35); --radius-2xl: calc(var(--radius) * 1.8);
+}
+
+:root {
+  --background: oklch(0.965 0.018 84); --foreground: oklch(0.245 0.032 67);
+  --card: oklch(0.99 0.01 85); --card-foreground: oklch(0.245 0.032 67);
+  --popover: oklch(0.99 0.01 85); --popover-foreground: oklch(0.245 0.032 67);
+  --primary: oklch(0.39 0.07 166); --primary-foreground: oklch(0.98 0.01 85);
+  --secondary: oklch(0.92 0.04 82); --secondary-foreground: oklch(0.29 0.04 68);
+  --muted: oklch(0.93 0.018 82); --muted-foreground: oklch(0.52 0.028 70);
+  --accent: oklch(0.9 0.055 84); --accent-foreground: oklch(0.29 0.04 68);
+  --destructive: oklch(0.58 0.2 29); --border: oklch(0.85 0.028 78);
+  --input: oklch(0.82 0.025 78); --ring: oklch(0.52 0.08 163); --radius: 0.75rem;
+}
+
+.dark {
+  --background: oklch(0.2 0.025 162); --foreground: oklch(0.94 0.02 84);
+  --card: oklch(0.25 0.03 162); --card-foreground: oklch(0.94 0.02 84);
+  --popover: oklch(0.25 0.03 162); --popover-foreground: oklch(0.94 0.02 84);
+  --primary: oklch(0.75 0.08 83); --primary-foreground: oklch(0.22 0.03 162);
+  --secondary: oklch(0.31 0.035 162); --secondary-foreground: oklch(0.92 0.02 84);
+  --muted: oklch(0.3 0.025 162); --muted-foreground: oklch(0.72 0.025 84);
+  --accent: oklch(0.35 0.05 163); --accent-foreground: oklch(0.96 0.02 84);
+  --destructive: oklch(0.68 0.18 25); --border: oklch(1 0 0 / 13%);
+  --input: oklch(1 0 0 / 18%); --ring: oklch(0.72 0.08 83);
+}
+
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  html { @apply font-sans; }
+  body { @apply bg-background text-foreground; }
+  button, select { cursor: pointer; }
+}
+::selection { background: rgba(202, 157, 76, .28); }
