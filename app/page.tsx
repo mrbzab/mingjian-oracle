@@ -1,14 +1,18 @@
 'use client';
 
-import { type SyntheticEvent, useEffect, useMemo, useState } from 'react';
-import { Compass, Copy, History, MoonStar, ScrollText, Trash2 } from 'lucide-react';
+import { type SyntheticEvent, useEffect, useRef, useState } from 'react';
+import { History, ScrollText, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@/components/ui/table';
-import { annualPillar, calculateBaZi, CITIES, DEFAULT_INPUT, formatReport, gregorianDate, type BirthInput } from '@/lib/bazi';
+import { beijingNow, calculateBaZi, CITIES, DEFAULT_INPUT, formatReport, gregorianDate, type BirthInput } from '@/lib/bazi';
+import { LuckOverview, LuckExplorer } from '@/components/luck-explorer';
+import { TermHelp } from '@/components/term-help';
+import { ChartSheet } from '@/components/chart-sheet';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Solar } from 'lunar-typescript';
 
 type Saved = { id: string; input: BirthInput };
@@ -23,9 +27,29 @@ export default function Home() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [history, setHistory] = useState<Saved[]>([]);
-  const [year, setYear] = useState(2026);
-  const [cycle, setCycle] = useState(0);
-  const flow = useMemo(() => annualPillar(year, result.master), [year, result.master]);
+  const [now, setNow] = useState<string | null>(null);
+  const resultsRef = useRef<HTMLHeadingElement>(null);
+  const formTitleRef = useRef<HTMLHeadingElement>(null);
+  const rulesRef = useRef<HTMLDetailsElement>(null);
+  const errorRef = useRef<HTMLParagraphElement>(null);
+  const shouldReveal = useRef(false);
+
+  function focusSection(element: HTMLElement | null) {
+    if (!element) return;
+    element.focus({ preventScroll: true });
+    element.scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+  }
+  useEffect(() => {
+    if (!shouldReveal.current) return;
+    shouldReveal.current = false;
+    if (window.matchMedia('(max-width: 800px)').matches) focusSection(resultsRef.current);
+  }, [result]);
+  useEffect(() => {
+    if (error) {
+      if (rulesRef.current) rulesRef.current.open = true;
+      focusSection(errorRef.current);
+    }
+  }, [error]);
 
   useEffect(() => {
     try {
@@ -40,7 +64,11 @@ export default function Home() {
         setHistory(valid);
       }
     } catch { /* Storage can be disabled; calculation remains available. */ }
-    setYear(new Date().getFullYear());
+    const refreshClock = () => setNow(beijingNow());
+    refreshClock();
+    const interval = window.setInterval(refreshClock, 60_000);
+    window.addEventListener('focus', refreshClock);
+    return () => { window.clearInterval(interval); window.removeEventListener('focus', refreshClock); };
   }, []);
 
   function update<K extends keyof BirthInput>(key: K, value: BirthInput[K]) {
@@ -68,12 +96,13 @@ export default function Home() {
     event.preventDefault();
     try {
       const next = calculateBaZi(input);
-      setResult(next); setIsExample(false); setError(''); setNotice(''); setCycle(0);
+      shouldReveal.current = true;
+      setResult(next); setIsExample(false); setError(''); setNotice(''); setNow(beijingNow());
       saveHistory([{ id: crypto.randomUUID(), input: { ...input } }, ...history].slice(0, 5));
     } catch (e) { setError(e instanceof Error ? e.message : '排盘未完成，请检查出生资料。'); }
   }
   function restore(saved: Saved) {
-    try { const next = calculateBaZi(saved.input); setResult(next); setInput(saved.input); setIsExample(false); setError(''); setCycle(0); }
+    try { const next = calculateBaZi(saved.input); shouldReveal.current = true; setResult(next); setInput(saved.input); setIsExample(false); setError(''); setNow(beijingNow()); }
     catch { setError('此记录无效或不适用于当前规则，请重新填写。'); }
   }
   async function copy() {
@@ -83,20 +112,22 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <header className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-3 px-5 py-6 md:px-10">
-        <div className="flex items-center gap-3"><span className="grid size-11 place-items-center rounded-full bg-primary text-primary-foreground"><MoonStar className="size-5" /></span><div><p className="font-serif text-2xl tracking-[.15em]">命笺</p><p className="text-sm text-muted-foreground">四柱八字</p></div></div>
-        <span className="rounded-full border border-border px-4 py-2 text-sm text-muted-foreground">历法可核对 · 不作命运承诺</span>
-      </header>
+      <header className="site-header"><div className="brand"><span className="brand-seal">命</span><div><p>命笺</p><span>四柱八字</span></div></div><span className="header-note">传统文化 · 理性解读</span></header>
 
-      <div className="mx-auto grid max-w-[1440px] gap-6 px-5 pb-10 md:px-10 xl:grid-cols-[360px_minmax(0,1fr)]">
-        <aside className="self-start rounded-3xl border border-border bg-card p-6 shadow-sm">
-          <h1 className="mb-2 font-serif text-2xl">填写出生资料</h1>
-          <p className="mb-6 text-sm leading-6 text-muted-foreground">支持 1901–2099 年中国地区出生记录。日期按中国农历换算，时刻与时制请以原始记录为准。</p>
-          <form onSubmit={submit} className="space-y-4">
-            <div className="space-y-2"><Label htmlFor="name">称呼（选填，不参与计算）</Label><Input id="name" value={input.name} maxLength={30} onChange={(e) => update('name', e.target.value)} placeholder="未署名" className="h-11" /></div>
-            <div className="space-y-2"><Label htmlFor="calendar">历法（切换时自动换算日期）</Label><NativeSelect id="calendar" value={input.calendar} onChange={(e) => changeCalendar(e.target.value as BirthInput['calendar'])} className="choice"><NativeSelectOption value="solar">公历 / 阳历</NativeSelectOption><NativeSelectOption value="lunar">农历 / 阴历</NativeSelectOption></NativeSelect></div>
+      <div className="workspace">
+        <aside className="birth-panel">
+          <h1 ref={formTitleRef} tabIndex={-1} className="mb-2 scroll-mt-5 font-serif text-2xl">出生资料</h1>
+          <p className="mb-6 text-sm leading-6 text-muted-foreground">1901–2099 年 · 中国地区</p>
+          <form onSubmit={submit} className="space-y-4" onInvalidCapture={(event) => {
+            const field = event.target as HTMLInputElement;
+            if (rulesRef.current?.contains(field)) {
+              rulesRef.current.open = true;
+              requestAnimationFrame(() => field.focus());
+            }
+          }}>
+            <div className="space-y-2"><Label htmlFor="calendar">出生日期历法</Label><NativeSelect id="calendar" value={input.calendar} onChange={(e) => changeCalendar(e.target.value as BirthInput['calendar'])} className="choice"><NativeSelectOption value="solar">公历 / 阳历</NativeSelectOption><NativeSelectOption value="lunar">农历 / 阴历</NativeSelectOption></NativeSelect></div>
             <div className="grid grid-cols-[1.35fr_1fr_1fr] gap-2">
-              {([['year', '年', 1901, 2099], ['month', '月', 1, 12], ['day', '日', 1, input.calendar === 'lunar' ? 30 : 31]] as const).map(([key, label, min, max]) => <div key={key} className="space-y-2"><Label htmlFor={key}>{label}</Label><Input id={key} type="number" min={min} max={max} required value={input[key] || ''} onChange={(e) => update(key, Number(e.target.value))} className="h-11" /></div>)}
+              {([['year', '年', 1901, 2099], ['month', '月', 1, 12], ['day', '日', 1, input.calendar === 'lunar' ? 30 : 31]] as const).map(([key, label, min, max]) => <div key={key} className="min-w-0 space-y-2"><Label htmlFor={key}>{label}</Label><Input id={key} type="number" inputMode="numeric" min={min} max={max} required value={input[key] || ''} onChange={(e) => update(key, Number(e.target.value))} className="h-11" /></div>)}
             </div>
             {input.calendar === 'lunar' && <div className="flex items-center gap-3"><Checkbox id="leap" checked={input.leap} onCheckedChange={(checked) => update('leap', checked)} /><Label htmlFor="leap">这是闰月（会校验是否存在）</Label></div>}
             <div className="space-y-2"><Label htmlFor="time">出生时刻（24 小时制）</Label><Input id="time" type="time" step="1" required={!input.unknownTime} disabled={input.unknownTime} value={input.time} onChange={(e) => update('time', e.target.value)} className="h-11" /></div>
@@ -104,10 +135,11 @@ export default function Home() {
             <div className="space-y-2"><Label htmlFor="city">出生城市</Label><NativeSelect id="city" value={CITIES.some((c) => c.name === input.city) ? input.city : 'custom'} className="choice" onChange={(e) => { const city = CITIES.find((c) => c.name === e.target.value); setInput((v) => ({ ...v, city: city?.name ?? '其他地区', longitude: city?.longitude ?? v.longitude })); }}>
               {CITIES.map((city) => <NativeSelectOption key={city.name}>{city.name}</NativeSelectOption>)}<NativeSelectOption value="custom">其他地区 / 手动经度</NativeSelectOption>
             </NativeSelect></div>
-            <div className="space-y-2"><Label htmlFor="gender">传统起运顺逆依据</Label><NativeSelect id="gender" value={input.gender} onChange={(e) => update('gender', e.target.value as BirthInput['gender'])} className="choice"><NativeSelectOption value="unknown">不提供（仍可排四柱）</NativeSelectOption><NativeSelectOption value="male">男命口径</NativeSelectOption><NativeSelectOption value="female">女命口径</NativeSelectOption></NativeSelect></div>
+            <div className="space-y-2"><Label htmlFor="gender">起运性别口径</Label><NativeSelect id="gender" value={input.gender} onChange={(e) => update('gender', e.target.value as BirthInput['gender'])} className="choice"><NativeSelectOption value="unknown">不提供（仍可排四柱）</NativeSelectOption><NativeSelectOption value="male">男命口径</NativeSelectOption><NativeSelectOption value="female">女命口径</NativeSelectOption></NativeSelect></div>
 
-            <details className="rounded-xl border border-border p-4" open>
-              <summary className="cursor-pointer font-medium">时间与流派规则</summary>
+            <div className="space-y-2"><Label htmlFor="name">称呼（选填）</Label><Input id="name" value={input.name} maxLength={30} onChange={(e) => update('name', e.target.value)} placeholder="未署名" className="h-11" /></div>
+            <details ref={rulesRef} className="rules-panel">
+              <summary className="cursor-pointer font-medium">时间与流派规则<span className="mt-2 block text-sm font-normal leading-6 text-muted-foreground">{input.timezone === 'Asia/Shanghai' ? '历史民用时间' : 'UTC+8 标准时间'} · {input.clock === 'apparent' ? '真太阳时近似' : '北京时间'} · {input.daySect === 1 ? '23:00' : '00:00'} 换日<br />起运：{input.yunSect === 2 ? '按分钟' : '按时辰'}折算 · 点此展开修改</span></summary>
               <div className="mt-4 space-y-4">
                 <div className="space-y-2"><Label htmlFor="timezone">出生记录采用的时制</Label><NativeSelect id="timezone" value={input.timezone} onChange={(e) => update('timezone', e.target.value as BirthInput['timezone'])} className="choice"><NativeSelectOption value="Asia/Shanghai">历史民用时间（自动处理夏令时）</NativeSelectOption><NativeSelectOption value="+08:00">明确为 UTC+8 标准时间</NativeSelectOption></NativeSelect><p className="text-sm leading-6 text-muted-foreground">若记录已扣除夏令时，选择 UTC+8，避免重复校正。新疆地方时间须先换算，不能直接填入。</p></div>
                 <div className="space-y-2"><Label htmlFor="clock">日柱与时柱的时间口径</Label><NativeSelect id="clock" value={input.clock} disabled={input.unknownTime} onChange={(e) => update('clock', e.target.value as BirthInput['clock'])} className="choice"><NativeSelectOption value="beijing">北京时间（UTC+8）</NativeSelectOption><NativeSelectOption value="apparent">出生地真太阳时（近似）</NativeSelectOption></NativeSelect></div>
@@ -117,41 +149,37 @@ export default function Home() {
                 <div className="space-y-2"><Label htmlFor="overlap">夏令时回拨的重复时刻</Label><NativeSelect id="overlap" value={input.overlap} onChange={(e) => update('overlap', e.target.value as BirthInput['overlap'])} className="choice"><NativeSelectOption value="reject">未确认（遇到时提示）</NativeSelectOption><NativeSelectOption value="earlier">第一次出现</NativeSelectOption><NativeSelectOption value="later">第二次出现</NativeSelectOption></NativeSelect></div>
               </div>
             </details>
-            {error && <p role="alert" className="rounded-lg bg-destructive/10 p-3 text-sm leading-6 text-destructive">{error}</p>}
+            {error && <p ref={errorRef} tabIndex={-1} role="alert" className="scroll-mt-5 rounded-lg bg-destructive/10 p-3 text-sm leading-6 text-destructive">{error}</p>}
             <Button type="submit" className="h-12 w-full rounded-xl text-base"><ScrollText />排出命盘</Button>
           </form>
-          <p className="mt-4 text-sm leading-6 text-muted-foreground">计算在浏览器内完成，记录仅保存在本机。旧版娱乐结果不会当作真实命盘使用。</p>
+          <p className="mt-4 text-sm leading-6 text-muted-foreground">资料仅存于本机，计算不上传。</p>
           {history.length > 0 && <section className="mt-5 border-t pt-5"><h2 className="mb-3 flex items-center gap-2 text-base font-medium"><History className="size-4" />最近五份命盘</h2><ul className="space-y-2">{history.map((item) => <li key={item.id} className="flex items-center gap-1"><Button variant="outline" className="min-w-0 flex-1 justify-start truncate" onClick={() => restore(item)}>{item.input.name || '未署名'} · {item.input.year}/{item.input.month}/{item.input.day}</Button><Button size="icon" variant="ghost" aria-label={`删除${item.input.name || '未署名'}的记录`} onClick={() => saveHistory(history.filter((v) => v.id !== item.id))}><Trash2 /></Button></li>)}</ul></section>}
         </aside>
 
-        <section className="min-w-0 space-y-6" aria-live="polite">
-          <article className="rounded-3xl bg-[#173d34] p-5 text-[#f7f2e8] md:p-8">
-            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-white/15 pb-5"><div><p className="mb-2 text-sm text-[#d9bd86]">{isExample ? '示例命盘 · 填写左侧资料后重新排盘' : '按已提交资料排盘'}</p><h2 className="font-serif text-3xl">{result.input.name.trim() || '未署名'}的四柱</h2><p className="mt-3 text-sm leading-6 text-[#d5e2da]">公历 {result.date} · 农历 {result.lunarDate}</p></div><Button variant="outline" onClick={copy} className="border-white/25 bg-transparent text-white hover:bg-white/10 hover:text-white"><Copy />复制命盘</Button></div>
-            <div className="my-7 grid grid-cols-2 gap-3 md:grid-cols-4">
-              {result.pillars.map((options, index) => <section key={labels[index]} className="rounded-2xl border border-white/15 bg-white/5 p-4 text-center"><h3 className="mb-4 text-sm text-[#c3d8ce]">{labels[index]}</h3>{options.length ? options.map((pillar) => <div key={pillar.value} className="mb-2"><p className="font-serif text-4xl leading-[1.4] text-[#f0d89d]">{pillar.stem}<br />{pillar.branch}</p><p className="mt-3 text-sm">{pillar.tenGod}</p><p className="mt-1 text-sm text-[#c3d8ce]">{pillar.elements} · {pillar.naYin}</p></div>) : <p className="py-7 text-xl text-[#c3d8ce]">时刻未知</p>}{options.length > 1 && <p className="text-sm text-[#f0d89d]">以上均为候选</p>}</section>)}
-            </div>
-            <div className="rounded-xl bg-white/5 p-4 text-sm leading-7 text-[#d5e2da]">
-              <p>日主：{result.master ? `${result.master}（由日柱天干确定）` : '因换日边界暂不能确定'}</p>
-              {!result.input.unknownTime && <><p>统一北京时间：{result.beijing?.replace('T', ' ')}（UTC+8）</p><p>日时排盘时间：{result.clockDate?.replace('T', ' ')}{result.input.clock === 'apparent' ? ` · 真太阳时近似，较北京时间 ${result.adjustment >= 0 ? '+' : ''}${result.adjustment.toFixed(2)} 分钟` : ' · 北京时间'}</p></>}
-            </div>
-          </article>
+        <section className="results-column" aria-live="polite">
+          <div className="flex flex-wrap items-center justify-between gap-3"><h2 ref={resultsRef} tabIndex={-1} className="scroll-mt-5 text-sm font-medium text-muted-foreground">{isExample ? '命盘预览 / 示例' : '命盘预览 / 已更新'}</h2><Button variant="outline" className="min-h-11 min-[801px]:hidden" onClick={() => focusSection(formTitleRef.current)}>返回修改资料</Button></div>
+          <ChartSheet result={result} isExample={isExample} onCopy={copy} />
+          <LuckOverview result={result} now={now} />
 
           {result.warnings.length > 0 && <aside className="rounded-2xl border border-amber-400/40 bg-amber-50 p-5 text-amber-950"><h3 className="mb-2 font-medium">不确定性与复核提示</h3><ul className="list-disc space-y-2 pl-5 text-sm leading-6">{result.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul></aside>}
 
-          <section className="panel"><h3 className="section-title">藏干与十神</h3><Table><TableHeader><TableRow><TableHead>柱位</TableHead><TableHead>干支</TableHead><TableHead>藏干 · 五行 · 十神</TableHead></TableRow></TableHeader><TableBody>{result.pillars.flatMap((options, i) => options.map((p) => <TableRow key={`${i}-${p.value}`}><TableCell>{labels[i]}</TableCell><TableCell>{p.value}</TableCell><TableCell className="whitespace-normal leading-7">{p.hidden.map((h) => `${h.gan}${h.element} · ${h.tenGod}`).join('　/　')}</TableCell></TableRow>))}</TableBody></Table>
+          <Tabs defaultValue="luck" className="result-tabs">
+            <TabsList variant="line" className="result-tab-list"><TabsTrigger value="luck">大运流年</TabsTrigger><TabsTrigger value="details">五行藏干</TabsTrigger></TabsList>
+            <TabsContent value="luck" keepMounted><LuckExplorer key={JSON.stringify(result.input)} result={result} now={now} /></TabsContent>
+            <TabsContent value="details">
+
+          <section className="panel"><h3 className="section-title"><TermHelp term="藏干" />与<TermHelp term="十神" /></h3><Table><TableHeader><TableRow><TableHead>柱位</TableHead><TableHead>干支</TableHead><TableHead>藏干 · 五行 · 十神</TableHead></TableRow></TableHeader><TableBody>{result.pillars.flatMap((options, i) => options.map((p) => <TableRow key={`${i}-${p.value}`}><TableCell>{labels[i]}</TableCell><TableCell>{p.value}</TableCell><TableCell className="whitespace-normal leading-7">{p.hidden.map((h) => <span key={h.gan} className="mr-3 inline-block">{h.gan}{h.element} · <TermHelp term={h.tenGod} /></span>)}</TableCell></TableRow>))}</TableBody></Table>
             {result.elementCounts.length > 0 && <><h4 className="mb-3 mt-6 font-medium">八字表层五行计数</h4><div className="grid grid-cols-5 gap-2">{result.elementCounts.map((e) => <div key={e.element} className="rounded-xl bg-primary/6 py-3 text-center"><p className="text-sm text-muted-foreground">{e.element}</p><p className="mt-1 text-2xl text-primary">{e.count}</p></div>)}</div><p className="mt-3 text-sm leading-6 text-muted-foreground">只统计四干四支所属五行，共 8 个字；不加权藏干。这不是旺衰评分，不能据“缺某五行”直接判断喜用神或补救。</p></>}
           </section>
 
-          <section className="panel"><h3 className="section-title flex items-center gap-2"><Compass className="size-5 text-primary" />大运与起运</h3>
-            {result.luck ? <><p className="text-base leading-7">{result.luck.forward ? '顺行' : '逆行'} · 出生后 {result.luck.age} 起运</p><p className="mt-1 text-sm text-muted-foreground">交运时间：{result.luck.start}（UTC+8，传统折算值）</p><div className="mt-5 grid grid-cols-2 gap-2 md:grid-cols-4">{result.luck.cycles.map((v, i) => <Button key={v.start} variant={cycle === i ? 'default' : 'outline'} className="h-auto flex-col gap-1 py-3" onClick={() => setCycle(i)} aria-pressed={cycle === i}><span className="text-lg">{v.value}</span><span className="text-sm">{v.start.slice(0, 4)} 起</span></Button>)}</div><div className="mt-4 rounded-xl bg-muted/70 p-4 text-sm leading-7"><p>{result.luck.cycles[cycle]?.value}大运 · {result.luck.cycles[cycle]?.tenGod} · {result.luck.cycles[cycle]?.naYin}</p><p>起：{result.luck.cycles[cycle]?.start}</p><p>止：{result.luck.cycles[cycle]?.end}（不含，UTC+8）</p></div></> : <p className="text-base leading-7 text-muted-foreground">提供出生时刻和传统起运性别口径后，才计算顺逆、大运与交运时间。未提供时不会推测。</p>}
-          </section>
 
-          <section className="panel"><div className="mb-4 flex flex-wrap items-center justify-between gap-3"><h3 className="section-title mb-0">流年干支</h3><div className="flex items-center gap-2"><Label htmlFor="flowYear">年份</Label><NativeSelect id="flowYear" value={year} onChange={(e) => setYear(Number(e.target.value))} className="choice w-28">{Array.from({ length: 299 }, (_, i) => 1901 + i).map((y) => <NativeSelectOption key={y} value={y}>{y}</NativeSelectOption>)}</NativeSelect></div></div><p className="font-serif text-3xl text-primary">{flow.value}<span className="ml-4 font-sans text-base">{flow.tenGod} · {flow.naYin}</span></p><p className="mt-3 text-sm leading-7 text-muted-foreground">从 {flow.start} 立春起，至 {flow.end} 立春止（不含，UTC+8）。十神相对于本命日主，不表示这一年必然吉凶。</p></section>
+            </TabsContent>
+          </Tabs>
 
           {notice && <output className="block rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm leading-6">{notice}</output>}
         </section>
       </div>
-      <footer className="mx-auto max-w-[1440px] border-t px-5 py-6 text-sm leading-6 text-muted-foreground md:px-10">命笺 · 尊重历法边界与出生资料隐私。不要据此作医疗、投资、婚姻或其他重大决定。</footer>
+      <footer className="site-footer">命笺 · 尊重历法边界与出生资料隐私。不要据此作医疗、投资、婚姻或其他重大决定。</footer>
     </main>
   );
 }

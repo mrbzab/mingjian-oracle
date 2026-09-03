@@ -182,6 +182,40 @@ export function annualPillar(year: number, dayMaster: string | null) {
   return { year, ...describePillar(lunar.getEightChar().getYear(), dayMaster), start: start.toYmdHms(), end: end.toYmdHms() };
 }
 
+export function beijingNow() {
+  return Temporal.Now.zonedDateTimeISO('+08:00').toPlainDateTime().toString({ smallestUnit: 'second' });
+}
+
+// All timeline comparisons use the same UTC+8 clock, with inclusive starts and exclusive ends.
+export function luckAt(luck: BaZiResult['luck'], now: string) {
+  if (!luck) return { state: 'unavailable' as const, index: -1 };
+  const time = Temporal.PlainDateTime.from(now);
+  const index = luck.cycles.findIndex((cycle) =>
+    Temporal.PlainDateTime.compare(time, cycle.start) >= 0 && Temporal.PlainDateTime.compare(time, cycle.end) < 0);
+  if (index >= 0) return { state: 'active' as const, index };
+  return { state: Temporal.PlainDateTime.compare(time, luck.start) < 0 ? 'before' as const : 'after' as const, index: -1 };
+}
+
+export function annualYearAt(now: string) {
+  const time = Temporal.PlainDateTime.from(now);
+  integer(time.year, 1901, 2199, '当前年份');
+  return Temporal.PlainDateTime.compare(time, annualPillar(time.year, null).start) < 0 ? time.year - 1 : time.year;
+}
+
+export function cycleYears(cycle: NonNullable<BaZiResult['luck']>['cycles'][number], master: string | null) {
+  const start = Temporal.PlainDateTime.from(cycle.start);
+  const end = Temporal.PlainDateTime.from(cycle.end);
+  const years = [];
+  for (let year = Math.max(1901, start.year - 1); year <= Math.min(2199, end.year); year++) {
+    const flow = annualPillar(year, master);
+    if (Temporal.PlainDateTime.compare(flow.start, end) >= 0 || Temporal.PlainDateTime.compare(flow.end, start) <= 0) continue;
+    const overlapStart = Temporal.PlainDateTime.compare(flow.start, start) < 0 ? cycle.start : flow.start;
+    const overlapEnd = Temporal.PlainDateTime.compare(flow.end, end) > 0 ? cycle.end : flow.end;
+    years.push({ ...flow, overlapStart, overlapEnd, partial: overlapStart !== flow.start || overlapEnd !== flow.end });
+  }
+  return years;
+}
+
 export function formatReport(result: BaZiResult) {
   return [
     `${result.input.name.trim() || '未署名'}的八字排盘`,

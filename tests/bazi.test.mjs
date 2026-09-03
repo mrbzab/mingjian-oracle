@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Solar, Lunar } from 'lunar-typescript';
 import { Temporal } from '@js-temporal/polyfill';
-import { calculateBaZi, DEFAULT_INPUT, gregorianDate, annualPillar, equationOfTime, formatReport } from '../lib/bazi.ts';
+import { calculateBaZi, DEFAULT_INPUT, gregorianDate, annualPillar, equationOfTime, formatReport, luckAt, annualYearAt, cycleYears } from '../lib/bazi.ts';
 
 const input = (overrides = {}) => ({ ...DEFAULT_INPUT, timezone: '+08:00', ...overrides });
 const values = (result) => result.pillars.map((options) => options.map((p) => p.value));
@@ -155,5 +155,71 @@ test('broad deterministic date samples round-trip through lunar conversion', () 
     assert.equal(Lunar.fromYmd(lunar.getYear(), lunar.getMonth(), lunar.getDay()).getSolar().toYmd(), solar.toYmd());
     const r = calculateBaZi(input({ year, month, day: 15 }));
     assert.equal(r.pillars.flat().length, 4); assert.ok(r.pillars.flat().every((p) => p.value.length === 2 && p.tenGod));
+  }
+});
+
+test('current luck changes at the exact start, never at January 1', () => {
+  const { luck } = calculateBaZi(input({ gender: 'male' }));
+  for (const [index, cycle] of luck.cycles.entries()) {
+    assert.deepEqual(luckAt(luck, cycle.start), { state: 'active', index });
+    const beforeEnd = Temporal.PlainDateTime.from(cycle.end).subtract({ seconds: 1 }).toString();
+    assert.deepEqual(luckAt(luck, beforeEnd), { state: 'active', index });
+  }
+  assert.deepEqual(luckAt(luck, luck.cycles[1].start), { state: 'active', index: 1 });
+});
+
+test('unavailable, not yet started and exhausted cycles have distinct states', () => {
+  const { luck } = calculateBaZi(input({ gender: 'female' }));
+  assert.deepEqual(luckAt(null, '2026-09-03T12:00:00'), { state: 'unavailable', index: -1 });
+  assert.deepEqual(luckAt(luck, Temporal.PlainDateTime.from(luck.start).subtract({ seconds: 1 }).toString()), { state: 'before', index: -1 });
+  assert.deepEqual(luckAt(luck, luck.cycles.at(-1).end), { state: 'after', index: -1 });
+});
+
+test('current annual year changes at Li Chun, with January still in previous flow', () => {
+  const flow = annualPillar(2026, null);
+  assert.equal(annualYearAt('2026-01-01T00:00:00'), 2025);
+  assert.equal(annualYearAt(Temporal.PlainDateTime.from(flow.start).subtract({ seconds: 1 }).toString()), 2025);
+  assert.equal(annualYearAt(flow.start), 2026);
+});
+
+test('cycle years are overlapping Li Chun intervals, not just Gregorian years', () => {
+  const { luck, master } = calculateBaZi(input({ gender: 'male' }));
+  const years = cycleYears(luck.cycles[0], master);
+  assert.equal(years.length, 11);
+  assert.equal(years[0].overlapStart, luck.cycles[0].start);
+  assert.equal(years.at(-1).overlapEnd, luck.cycles[0].end);
+  assert.equal(years[0].partial, true);
+  assert.equal(years.at(-1).partial, true);
+  for (const [index, year] of years.entries()) {
+    assert.equal(year.tenGod, annualPillar(year.year, master).tenGod);
+    assert.ok(Temporal.PlainDateTime.compare(year.overlapStart, year.overlapEnd) < 0);
+    if (index) assert.equal(years[index - 1].overlapEnd, year.overlapStart);
+  }
+});
+
+test('flow on either side of a handover retains the same annual pillar', () => {
+  const { luck, master } = calculateBaZi(input({ gender: 'female' }));
+  const first = cycleYears(luck.cycles[0], master).at(-1);
+  const second = cycleYears(luck.cycles[1], master)[0];
+  assert.equal(first.year, second.year);
+  assert.equal(first.value, second.value);
+  assert.equal(first.overlapEnd, second.overlapStart);
+});
+
+test('an exact Li Chun-to-Li Chun interval has no extra or partial years', () => {
+  const { luck } = calculateBaZi(input({ gender: 'male' }));
+  const cycle = { ...luck.cycles[0], start: annualPillar(2024, null).start, end: annualPillar(2034, null).start };
+  const years = cycleYears(cycle, '甲');
+  assert.deepEqual(years.map((item) => item.year), Array.from({ length: 10 }, (_, i) => 2024 + i));
+  assert.ok(years.every((item) => !item.partial));
+});
+
+test('latest supported birth retains all eight selectable cycles and years', () => {
+  const { luck, master } = calculateBaZi(input({ year: 2099, month: 12, day: 31, gender: 'male' }));
+  for (const cycle of luck.cycles) {
+    const years = cycleYears(cycle, master);
+    assert.ok(years.length >= 10);
+    assert.equal(years[0].overlapStart, cycle.start);
+    assert.equal(years.at(-1).overlapEnd, cycle.end);
   }
 });
