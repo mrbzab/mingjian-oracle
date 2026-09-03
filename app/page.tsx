@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 type Reading = {
   id: string; name: string; date: string; time: string; gender: string; createdAt: string;
   element: string; sign: string; keyword: string; overview: string; advice: string;
+  dailyFortune: string; monthlyFortune: string; yearlyFortune: string; auspicious: string; avoid: string;
   luckyColor: string; luckyNumber: number; luckyDirection: string;
   scores: { label: string; value: number }[];
 };
@@ -49,9 +50,27 @@ function createReading(name: string, date: string, time: string, gender: string)
     '把重要想法写下来，并在日落前与可信任的人交流一次。',
     '适合学习、复盘与重新安排优先级，避免冲动承诺。',
   ][numbers[9] % 4];
+  const dailyFortune = [
+    '今日气场先缓后扬，上午适合整理，午后更利沟通与推进。',
+    '今日灵感敏锐，适合处理需要判断力的事，重要决定宜多核对一次。',
+    '今日人缘较旺，主动联系久未问候的人，容易得到温暖回应。',
+  ][numbers[3] % 3];
+  const monthlyFortune = [
+    '本月是建立秩序的阶段。稳住日常节奏，月底会看到清晰回报。',
+    '本月机会来自新关系与新视角，适度走出熟悉范围会有收获。',
+    '本月宜做减法，结束消耗性的安排后，真正重要的机会才会显现。',
+  ][numbers[4] % 3];
+  const yearlyFortune = [
+    '年度主题是“积累”。你正在搭建一条能够走得更远的路。',
+    '年度主题是“转向”。一次主动选择会带来新的成长支点。',
+    '年度主题是“连接”。贵人与合作将成为突破旧局的关键。',
+  ][numbers[5] % 3];
+  const auspicious = ['学习新事物', '整理财务', '真诚表达', '制定计划', '短途出行'][numbers[6] % 5];
+  const avoid = ['仓促决定', '过度承诺', '情绪消费', '熬夜硬撑', '反复内耗'][numbers[7] % 5];
   return {
     id: `${Date.now()}-${numbers[10]}`, name: name || '有缘人', date, time, gender,
     createdAt: new Date().toISOString(), element, sign, keyword, overview, advice,
+    dailyFortune, monthlyFortune, yearlyFortune, auspicious, avoid,
     luckyColor: colors[numbers[10] % colors.length], luckyNumber: (numbers[11] % 9) + 1,
     luckyDirection: directions[numbers[6] % directions.length], scores,
   };
@@ -88,13 +107,14 @@ export default function Home() {
   }
 
   async function copyResult() {
-    const text = `${reading.name}的命笺｜${reading.sign}\n关键词：${reading.keyword}\n${reading.overview}\n今日宜：${reading.advice}\n幸运色：${reading.luckyColor}｜幸运数字：${reading.luckyNumber}｜方位：${reading.luckyDirection}`;
+    const text = `${reading.name}的命笺｜${reading.sign}\n关键词：${reading.keyword}\n${reading.overview}\n今日：${reading.dailyFortune}\n本月：${reading.monthlyFortune}\n今年：${reading.yearlyFortune}\n宜：${reading.auspicious}｜忌：${reading.avoid}\n幸运色：${reading.luckyColor}｜幸运数字：${reading.luckyNumber}｜方位：${reading.luckyDirection}`;
     await navigator.clipboard.writeText(text);
     setCopied(true); window.setTimeout(() => setCopied(false), 1800);
   }
 
   function restore(item: Reading) {
-    setReading(item); setName(item.name === '有缘人' ? '' : item.name);
+    const restored = item.dailyFortune ? item : createReading(item.name, item.date, item.time, item.gender);
+    setReading(restored); setName(item.name === '有缘人' ? '' : item.name);
     setDate(item.date); setTime(item.time); setGender(item.gender);
   }
 
@@ -134,8 +154,16 @@ export default function Home() {
             <div className="flex flex-wrap items-start justify-between gap-4 border-b border-white/12 pb-6"><div><p className="mb-2 text-xs tracking-[.2em] text-[#d9bd86]">{displayDate} · {reading.time}</p><h2 className="font-serif text-3xl font-semibold">{reading.name}的命笺</h2></div><span className="rounded-full border border-[#d9bd86]/35 bg-[#d9bd86]/10 px-4 py-2 font-serif text-sm text-[#efd79d]">{reading.sign}</span></div>
             <div className="grid gap-6 py-7 sm:grid-cols-[1fr_auto]"><div><p className="text-xs tracking-[.24em] text-[#b9d2c8]">本命关键词</p><p className="mt-2 font-serif text-4xl text-[#f0d89d]">{reading.keyword}</p></div><div className="flex items-center gap-4 rounded-2xl bg-white/7 px-5 py-4"><span className="grid size-12 place-items-center rounded-full border border-[#f0d89d]/25 font-serif text-2xl text-[#f0d89d]">{reading.element}</span><div><p className="text-xs text-[#b9d2c8]">五行气象</p><p className="mt-1 text-sm">以{reading.element}为引，宜稳中求进</p></div></div></div>
             <p className="max-w-2xl font-serif text-lg leading-9 text-[#fbf7ef]">{reading.overview}</p>
+            <div className="mt-7 grid gap-3 md:grid-cols-3">
+              {[['今日运势', reading.dailyFortune], ['本月走势', reading.monthlyFortune], ['年度主题', reading.yearlyFortune]].map(([label, value], index) => (
+                <div key={label} className="rounded-2xl border border-white/10 bg-white/6 p-4">
+                  <p className="mb-2 text-xs tracking-[.16em] text-[#d9bd86]">{String(index + 1).padStart(2, '0')} · {label}</p>
+                  <p className="text-sm leading-6 text-[#e6eee9]">{value}</p>
+                </div>
+              ))}
+            </div>
             <div className="my-8 grid grid-cols-5 gap-2">{reading.scores.map((score) => <div key={score.label} className="text-center"><div className="mx-auto mb-2 flex h-24 w-2 items-end overflow-hidden rounded-full bg-white/10"><span className="w-full rounded-full bg-gradient-to-t from-[#b98c43] to-[#efd79d] transition-all duration-700" style={{ height: `${score.value}%` }} /></div><p className="text-xs text-[#b9d2c8]">{score.label}</p><p className="mt-1 text-sm font-semibold">{score.value}</p></div>)}</div>
-            <div className="rounded-2xl border border-white/10 bg-white/6 p-5"><p className="mb-2 flex items-center gap-2 text-xs tracking-[.18em] text-[#d9bd86]"><Compass className="size-4" />今日宜</p><p className="leading-7 text-[#f7f2e8]">{reading.advice}</p></div>
+            <div className="rounded-2xl border border-white/10 bg-white/6 p-5"><p className="mb-2 flex items-center gap-2 text-xs tracking-[.18em] text-[#d9bd86]"><Compass className="size-4" />行动提示</p><p className="leading-7 text-[#f7f2e8]">{reading.advice}</p><div className="mt-4 flex flex-wrap gap-2 text-xs"><span className="rounded-full bg-[#d9bd86]/13 px-3 py-2 text-[#efd79d]">宜 · {reading.auspicious}</span><span className="rounded-full bg-white/7 px-3 py-2 text-[#c7d8d1]">忌 · {reading.avoid}</span></div></div>
             <div className="mt-6 flex flex-wrap items-center justify-between gap-4"><div className="flex flex-wrap gap-2 text-xs text-[#c7d8d1]"><span className="rounded-full bg-white/7 px-3 py-2">幸运色 · {reading.luckyColor}</span><span className="rounded-full bg-white/7 px-3 py-2">幸运数 · {reading.luckyNumber}</span><span className="rounded-full bg-white/7 px-3 py-2">方位 · {reading.luckyDirection}</span></div><Button type="button" variant="outline" onClick={copyResult} className="border-white/15 bg-white/8 text-[#f7f2e8] hover:bg-white/14 hover:text-white">{copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}{copied ? '已复制' : '复制命笺'}</Button></div>
           </div>
         </article>
