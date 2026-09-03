@@ -48,3 +48,9 @@
   button, select { cursor: pointer; }
 }
 ::selection { background: rgba(202, 157, 76, .28); }
+.choice { width: 100%; }
+.choice select { min-height: 2.75rem; white-space: normal; }
+.panel { border: 1px solid var(--border); border-radius: 1.5rem; background: var(--card); padding: 1.5rem; }
+.section-title { font-family: var(--font-serif); font-size: 1.375rem; font-weight: 600; margin-bottom: 1rem; }
+.source-link { color: var(--primary); text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 480px) { .panel { padding: 1rem; } }
