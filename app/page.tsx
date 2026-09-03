@@ -84,7 +84,7 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-background text-foreground">
       <header className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-3 px-5 py-6 md:px-10">
-        <div className="flex items-center gap-3"><span className="grid size-11 place-items-center rounded-full bg-primary text-primary-foreground"><MoonStar className="size-5" /></span><div><p className="font-serif text-2xl tracking-[.15em]">命笺</p><p className="text-sm text-muted-foreground">四柱八字 · 历法排盘</p></div></div>
+        <div className="flex items-center gap-3"><span className="grid size-11 place-items-center rounded-full bg-primary text-primary-foreground"><MoonStar className="size-5" /></span><div><p className="font-serif text-2xl tracking-[.15em]">命笺</p><p className="text-sm text-muted-foreground">四柱八字</p></div></div>
         <span className="rounded-full border border-border px-4 py-2 text-sm text-muted-foreground">历法可核对 · 不作命运承诺</span>
       </header>
 
@@ -148,14 +148,6 @@ export default function Home() {
 
           <section className="panel"><div className="mb-4 flex flex-wrap items-center justify-between gap-3"><h3 className="section-title mb-0">流年干支</h3><div className="flex items-center gap-2"><Label htmlFor="flowYear">年份</Label><NativeSelect id="flowYear" value={year} onChange={(e) => setYear(Number(e.target.value))} className="choice w-28">{Array.from({ length: 299 }, (_, i) => 1901 + i).map((y) => <NativeSelectOption key={y} value={y}>{y}</NativeSelectOption>)}</NativeSelect></div></div><p className="font-serif text-3xl text-primary">{flow.value}<span className="ml-4 font-sans text-base">{flow.tenGod} · {flow.naYin}</span></p><p className="mt-3 text-sm leading-7 text-muted-foreground">从 {flow.start} 立春起，至 {flow.end} 立春止（不含，UTC+8）。十神相对于本命日主，不表示这一年必然吉凶。</p></section>
 
-          <section className="panel"><h3 className="section-title">计算口径与依据</h3><div className="space-y-3 text-sm leading-7 text-muted-foreground">
-            <p>年柱以立春交节瞬间划分，月柱以十二“节”划分，不以农历初一换月。交节判断始终使用实际出生瞬间换算的 UTC+8 时间，真太阳时只影响日、时柱。</p>
-            <p>当前口径：{result.input.daySect === 1 ? '流派 1：23:00 换日。' : '流派 2：00:00 换日；23:00–23:59 日柱仍属当天，但子时时干按次日推算（沿用引擎流派 2 规则）。'}</p>
-            <p>起运顺逆：阳年男命、阴年女命顺行；阴年男命、阳年女命逆行。顺行数至后一个节，逆行数至前一个节。{result.input.yunSect === 2 ? '按分钟折算：4320 分钟折 1 年，360 分钟折 1 月，12 分钟折 1 日，余 1 分钟折 2 小时。' : '按整日与时辰差折算：3 天折 1 年，1 时辰折 10 天。'}折算值是传统规则，不是天文年龄。</p>
-            <p>{result.input.unknownTime ? '以下交节信息以出生日期中午作展示参考，不代表确定出生时刻。' : '出生瞬间相邻的两个节：'}<br />前节：{result.prevJie.name} {result.prevJie.time}<br />后节：{result.nextJie.name} {result.nextJie.time}（均为 UTC+8）</p>
-            <p>历法引擎 <a className="source-link" href="https://github.com/6tail/lunar-typescript" target="_blank" rel="noreferrer">lunar-typescript 1.8.6（MIT）</a>；真太阳时均时差使用 <a className="source-link" href="https://gml.noaa.gov/grad/solcalc/solareqns.PDF" target="_blank" rel="noreferrer">NOAA 近似公式</a>。时区使用运行环境的 IANA 数据，历史记录与交节临界时刻建议独立复核。</p>
-            <p className="font-medium text-foreground">四柱、藏干、十神、大运属于传统文化计算体系；排盘规则可复核，不代表命运预测获得科学验证。本版不再生成随机运势分数、幸运数字或吉凶承诺。</p>
-          </div></section>
           {notice && <output className="block rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm leading-6">{notice}</output>}
         </section>
       </div>
