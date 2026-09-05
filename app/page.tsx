@@ -14,6 +14,7 @@ import { TermHelp } from '@/components/term-help';
 import { ChartSheet } from '@/components/chart-sheet';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Solar } from 'lunar-typescript';
+import { BaziEnhancement } from '@/components/bazi-enhancement';
 
 type Saved = { id: string; input: BirthInput };
 const HISTORY_KEY = 'mingjian-bazi-v1';
@@ -164,7 +165,8 @@ export default function Home() {
           {result.warnings.length > 0 && <aside className="rounded-2xl border border-amber-400/40 bg-amber-50 p-5 text-amber-950"><h3 className="mb-2 font-medium">不确定性与复核提示</h3><ul className="list-disc space-y-2 pl-5 text-sm leading-6">{result.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul></aside>}
 
           <Tabs defaultValue="luck" className="result-tabs">
-            <TabsList variant="line" className="result-tab-list"><TabsTrigger value="luck">大运流年</TabsTrigger><TabsTrigger value="details">五行藏干</TabsTrigger></TabsList>
+            <TabsList variant="line" className="result-tab-list"><TabsTrigger value="luck">大运流年</TabsTrigger><TabsTrigger value="details">五行藏干</TabsTrigger><TabsTrigger value="analysis">八字增强 / AI</TabsTrigger></TabsList>
+            <TabsContent value="analysis" keepMounted><BaziEnhancement key={JSON.stringify(result.input)} result={result} /></TabsContent>
             <TabsContent value="luck" keepMounted><LuckExplorer key={JSON.stringify(result.input)} result={result} now={now} /></TabsContent>
             <TabsContent value="details">
 
