@@ -16,6 +16,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Solar } from 'lunar-typescript';
 import { BaziEnhancement } from '@/components/bazi-enhancement';
 import { ZiweiPanel, QimenPanel } from '@/components/metaphysics-panels';
+import { SynthesisPanel } from '@/components/synthesis-panel';
+import type { ZiweiResult, QimenResult } from '@/lib/metaphysics';
 
 type Saved = { id: string; input: BirthInput };
 const HISTORY_KEY = 'mingjian-bazi-v1';
@@ -31,6 +33,12 @@ export default function Home() {
   const [history, setHistory] = useState<Saved[]>([]);
   const [now, setNow] = useState<string | null>(null);
   const [formCollapsed, setFormCollapsed] = useState(false);
+  const [chosenYear, setChosenYear] = useState<number | null>(null);
+  const year = chosenYear ?? Math.max(Number(result.date.slice(0,4)), Number(now?.slice(0,4) ?? result.date.slice(0,4)));
+  const birthKey = JSON.stringify(result.input);
+  const [ziweiSnapshot, setZiweiSnapshot] = useState<{birthKey:string;data:ZiweiResult} | null>(null);
+  const [qimenSnapshot, setQimenSnapshot] = useState<QimenResult | null>(null);
+  const currentZiwei = ziweiSnapshot?.birthKey === birthKey && Number(ziweiSnapshot.data.horoscope?.date.slice(0,4)) === year ? ziweiSnapshot.data : null;
   const resultsRef = useRef<HTMLHeadingElement>(null);
   const formTitleRef = useRef<HTMLHeadingElement>(null);
   const rulesRef = useRef<HTMLDetailsElement>(null);
@@ -158,7 +166,7 @@ export default function Home() {
             {error && <p ref={errorRef} tabIndex={-1} role="alert" className="scroll-mt-5 rounded-lg bg-destructive/10 p-3 text-sm leading-6 text-destructive">{error}</p>}
             <Button type="submit" className="h-12 w-full rounded-xl text-base"><ScrollText />排出命盘</Button>
           </form>
-          <p className="mt-4 text-sm leading-6 text-muted-foreground">资料仅存于本机，计算不上传。</p>
+          <p className="mt-4 text-sm leading-6 text-muted-foreground">排盘在本机完成。使用站内 AI 时，只在点击发送后转发所选资料。</p>
           {history.length > 0 && <section className="mt-5 border-t pt-5"><h2 className="mb-3 flex items-center gap-2 text-base font-medium"><History className="size-4" />最近五份命盘</h2><ul className="space-y-2">{history.map((item) => <li key={item.id} className="flex items-center gap-1"><Button variant="outline" className="min-w-0 flex-1 justify-start truncate" onClick={() => restore(item)}>{item.input.name || '未署名'} · {item.input.year}/{item.input.month}/{item.input.day}</Button><Button size="icon" variant="ghost" aria-label={`删除${item.input.name || '未署名'}的记录`} onClick={() => saveHistory(history.filter((v) => v.id !== item.id))}><Trash2 /></Button></li>)}</ul></section>}
           </div>
         </aside>
@@ -167,12 +175,13 @@ export default function Home() {
           <div className="workspace-heading"><div><p className="workspace-kicker">{isExample ? '示例命盘' : '已生成命盘'}</p><h2 ref={resultsRef} tabIndex={-1} className="scroll-mt-5">{result.input.name.trim() || '未署名'}的命笺</h2><p className="workspace-caption">{result.date} · {result.input.city} · {result.pillars.map((p) => p.map((v) => v.value).join('/') || '时柱未知').join('　')}</p></div><Button variant="outline" className="min-h-11 min-[801px]:hidden" onClick={() => { setFormCollapsed(false); requestAnimationFrame(() => focusSection(formTitleRef.current)); }}>修改资料</Button></div>
           {result.warnings.length > 0 && <details className="review-notice"><summary>排盘复核提示 · {result.warnings.length} 项</summary><ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6">{result.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul></details>}
           <Tabs defaultValue="overview" className="result-tabs">
-            <TabsList variant="line" className="result-tab-list"><TabsTrigger value="overview">命盘总览</TabsTrigger><TabsTrigger value="analysis">八字分析</TabsTrigger><TabsTrigger value="details">五行藏干</TabsTrigger><TabsTrigger value="luck">大运流年</TabsTrigger><TabsTrigger value="ziwei">紫微斗数</TabsTrigger><TabsTrigger value="qimen">奇门遁甲</TabsTrigger></TabsList>
-            <TabsContent value="ziwei" keepMounted><ZiweiPanel key={JSON.stringify(result.input)} result={result} /></TabsContent>
-            <TabsContent value="qimen" keepMounted><QimenPanel /></TabsContent>
+            <TabsList variant="line" className="result-tab-list"><TabsTrigger value="overview">命盘总览</TabsTrigger><TabsTrigger value="analysis">八字分析</TabsTrigger><TabsTrigger value="details">五行藏干</TabsTrigger><TabsTrigger value="luck">大运流年</TabsTrigger><TabsTrigger value="ziwei">紫微斗数</TabsTrigger><TabsTrigger value="qimen">奇门遁甲</TabsTrigger><TabsTrigger className="synthesis-trigger" value="synthesis">综合解读与 AI 追问</TabsTrigger></TabsList>
+            <TabsContent value="ziwei" keepMounted><ZiweiPanel key={birthKey} result={result} year={year} onYearChange={setChosenYear} onResult={(data) => setZiweiSnapshot(data ? {birthKey,data} : null)} /></TabsContent>
+            <TabsContent value="qimen" keepMounted><QimenPanel onResult={setQimenSnapshot} /></TabsContent>
+            <TabsContent value="synthesis" keepMounted><SynthesisPanel key={birthKey} result={result} year={year} ziwei={currentZiwei} qimen={qimenSnapshot} /></TabsContent>
             <TabsContent value="overview" className="overview-panels"><ChartSheet result={result} isExample={isExample} onCopy={copy} /><LuckOverview result={result} now={now} /></TabsContent>
-            <TabsContent value="analysis" keepMounted><BaziEnhancement key={JSON.stringify(result.input)} result={result} now={now} /></TabsContent>
-            <TabsContent value="luck" keepMounted><LuckExplorer key={JSON.stringify(result.input)} result={result} now={now} /></TabsContent>
+            <TabsContent value="analysis" keepMounted><BaziEnhancement key={birthKey} result={result} year={year} onYearChange={setChosenYear} /></TabsContent>
+            <TabsContent value="luck" keepMounted><LuckExplorer key={JSON.stringify(result.input)} result={result} now={now} sharedYear={year} onYearChange={setChosenYear} /></TabsContent>
             <TabsContent value="details">
 
           <section className="panel"><h3 className="section-title"><TermHelp term="藏干" />与<TermHelp term="十神" /></h3><Table><TableHeader><TableRow><TableHead>柱位</TableHead><TableHead>干支</TableHead><TableHead>藏干 · 五行 · 十神</TableHead></TableRow></TableHeader><TableBody>{result.pillars.flatMap((options, i) => options.map((p) => <TableRow key={`${i}-${p.value}`}><TableCell>{labels[i]}</TableCell><TableCell>{p.value}</TableCell><TableCell className="whitespace-normal leading-7">{p.hidden.map((h) => <span key={h.gan} className="mr-3 inline-block">{h.gan}{h.element} · <TermHelp term={h.tenGod} /></span>)}</TableCell></TableRow>))}</TableBody></Table>

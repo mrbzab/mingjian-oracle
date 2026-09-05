@@ -9,7 +9,7 @@ import { annualPillar, annualYearAt, cycleYears, luckAt, type BaZiResult } from 
 import { TermHelp } from '@/components/term-help';
 import { RelationsPanel } from '@/components/relations-panel';
 
-type Props = { result: BaZiResult; now: string | null };
+type Props = { result: BaZiResult; now: string | null; sharedYear?: number; onYearChange?: (year:number) => void };
 
 export function LuckOverview({ result, now }: Props) {
   const luck = result.luck;
@@ -27,17 +27,20 @@ export function LuckOverview({ result, now }: Props) {
   </section>;
 }
 
-export function LuckExplorer({ result, now }: Props) {
+export function LuckExplorer({ result, now, sharedYear, onYearChange }: Props) {
   const [pickedCycle, setPickedCycle] = useState<number | null>(null);
   const [pickedYear, setPickedYear] = useState<number | null>(null);
   const stripRef = useRef<HTMLFieldSetElement>(null);
   const current = now ? luckAt(result.luck, now) : null;
   const currentYear = now ? annualYearAt(now) : null;
-  const cycleIndex = pickedCycle ?? (current?.state === 'active' ? current.index : current?.state === 'after' ? 7 : 0);
-  const selected = result.luck?.cycles[cycleIndex];
+  const matchingCycle = sharedYear === undefined ? -1 : (result.luck?.cycles.findIndex((cycle) => cycleYears(cycle,result.master).some((item) => item.year === sharedYear)) ?? -1);
+  const picked = pickedCycle === null ? undefined : result.luck?.cycles[pickedCycle];
+  const pickedMatches = !!picked && (sharedYear === undefined || cycleYears(picked,result.master).some((item)=>item.year===sharedYear));
+  const cycleIndex = pickedMatches ? pickedCycle! : matchingCycle >= 0 ? matchingCycle : pickedCycle ?? (current?.state === 'active' ? current.index : current?.state === 'after' ? 7 : 0);
+  const selected = sharedYear !== undefined && matchingCycle < 0 ? undefined : result.luck?.cycles[cycleIndex];
   const years = useMemo(() => selected ? cycleYears(selected, result.master) : [], [selected, result.master]);
   const defaultYear = years.find((item) => item.year === currentYear)?.year ?? years[0]?.year ?? Math.max(1901, currentYear ?? 2026);
-  const year = pickedYear ?? defaultYear;
+  const year = sharedYear !== undefined && (!selected || years.some((item)=>item.year===sharedYear)) ? sharedYear : pickedYear ?? defaultYear;
   const flow = useMemo(() => annualPillar(year, result.master), [year, result.master]);
   const overlap = years.find((item) => item.year === year);
   useEffect(() => {
@@ -46,9 +49,9 @@ export function LuckExplorer({ result, now }: Props) {
     if (strip && button) strip.scrollTo({ left: button.offsetLeft - (strip.clientWidth - button.clientWidth) / 2 });
   }, [cycleIndex]);
 
-  function chooseCycle(index: number) { setPickedCycle(index); setPickedYear(null); }
+  function chooseCycle(index: number) { setPickedCycle(index); setPickedYear(null); const first=result.luck?.cycles[index]; if(first) onYearChange?.(cycleYears(first,result.master)[0].year); }
   return <section className="panel" aria-label="大运流年联动">
-    <div className="flex flex-wrap items-center justify-between gap-3"><h3 className="section-title mb-0 flex items-center gap-2"><Compass className="size-5 text-primary" />大运 · 流年</h3>{current?.state === 'active' && <Button variant="outline" onClick={() => { setPickedCycle(null); setPickedYear(null); }}>回到当前大运</Button>}</div>
+    <div className="flex flex-wrap items-center justify-between gap-3"><h3 className="section-title mb-0 flex items-center gap-2"><Compass className="size-5 text-primary" />大运 · 流年</h3>{current?.state === 'active' && <Button variant="outline" onClick={() => { setPickedCycle(null); setPickedYear(null); if (currentYear) onYearChange?.(currentYear); }}>回到当前大运</Button>}</div>
     {selected && result.luck ? <>
       <p className="mt-3 text-sm leading-6 text-muted-foreground">选择一步大运，再查看其中的流年。时间均为北京时间，起点包含、终点不包含。</p>
       <fieldset ref={stripRef} className="relative -mx-1 mt-5 flex min-w-0 snap-x gap-2 overflow-x-auto p-1 pb-3" aria-label="选择大运">
@@ -59,10 +62,10 @@ export function LuckExplorer({ result, now }: Props) {
       <div className="mt-2 rounded-xl bg-muted/70 p-4 text-sm leading-7"><p className="text-base font-medium">{selected.value}<TermHelp term="大运" /> · <TermHelp term={selected.tenGod} /> · <TermHelp term="纳音" />：{selected.naYin}</p><p>{selected.start} 至 {selected.end}</p></div>
       <h4 className="mb-3 mt-6 font-medium">这步大运覆盖的流年</h4>
       <fieldset className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4" aria-label="选择流年">
-        {years.map((item) => <Button key={item.year} variant={year === item.year ? 'default' : 'outline'} aria-pressed={year === item.year} onClick={() => setPickedYear(item.year)} className="h-auto flex-col gap-1 whitespace-normal px-2 py-3"><span className="text-base">{item.year} · {item.value}</span><span className="text-sm">{item.year === currentYear ? '当前流年 · ' : ''}{item.partial ? '部分时段' : item.tenGod}</span></Button>)}
+        {years.map((item) => <Button key={item.year} variant={year === item.year ? 'default' : 'outline'} aria-pressed={year === item.year} onClick={() => { setPickedYear(item.year); onYearChange?.(item.year); }} className="h-auto flex-col gap-1 whitespace-normal px-2 py-3"><span className="text-base">{item.year} · {item.value}</span><span className="text-sm">{item.year === currentYear ? '当前流年 · ' : ''}{item.partial ? '部分时段' : item.tenGod}</span></Button>)}
       </fieldset>
       <p className="mt-3 text-sm leading-6 text-muted-foreground">流年以立春为界，不从元旦开始。“部分时段”表示该流年与本步大运只有一段时间重合，交运前后可能分属不同大运。</p>
-    </> : <div className="mt-4 flex flex-wrap items-center gap-3"><p className="text-sm leading-6 text-muted-foreground">尚无大运，可先查看流年与本命四柱。</p><Label htmlFor="flowYear">年份</Label><NativeSelect id="flowYear" value={year} onChange={(event) => setPickedYear(Number(event.target.value))}>{Array.from({ length: 299 }, (_, index) => 1901 + index).map((value) => <NativeSelectOption key={value} value={value}>{value}</NativeSelectOption>)}</NativeSelect></div>}
+    </> : <div className="mt-4 flex flex-wrap items-center gap-3"><p className="text-sm leading-6 text-muted-foreground">此年份没有可用的所列大运，先查看流年与本命四柱。</p><Label htmlFor="flowYear">年份</Label><NativeSelect id="flowYear" value={year} onChange={(event) => { setPickedYear(Number(event.target.value)); onYearChange?.(Number(event.target.value)); }}>{Array.from({ length: 299 }, (_, index) => 1901 + index).map((value) => <NativeSelectOption key={value} value={value}>{value}</NativeSelectOption>)}</NativeSelect></div>}
       <div className="mt-6 border-t pt-5">
         <h4 className="text-lg font-medium">{year} 年 · 本命、大运与流年对照</h4>
         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">

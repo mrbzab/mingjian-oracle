@@ -135,6 +135,9 @@
 .ziwei-center { grid-column: 2 / 4; grid-row: 2 / 4; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px; padding: 18px; text-align: center; background: var(--muted); border-radius: 12px; }
 .ziwei-palace, .qimen-palace { min-width: 0; overflow-wrap: anywhere; border: 1px solid var(--border); border-radius: 10px; padding: 14px; background: var(--card); }
 .ziwei-soul { border-color: var(--primary); background: var(--accent); }
+.palace-open { text-align: left; font-weight: 600; color: var(--primary); min-height: 44px; text-decoration: underline; text-underline-offset: 4px; }
+.palace-open:focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
+.result-tab-list .synthesis-trigger { grid-column: 1 / -1; border-top: 1px solid var(--border); }
 .qimen-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; }
 @media (min-width: 1280px) { .result-tab-list { grid-template-columns: repeat(6,minmax(0,1fr)); } }
 @media (max-width: 1100px) { .ziwei-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } .ziwei-palace { grid-column: auto !important; grid-row: auto !important; } .ziwei-center { grid-column: 1 / -1; grid-row: auto; } }
