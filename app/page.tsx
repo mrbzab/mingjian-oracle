@@ -15,6 +15,7 @@ import { ChartSheet } from '@/components/chart-sheet';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Solar } from 'lunar-typescript';
 import { BaziEnhancement } from '@/components/bazi-enhancement';
+import { ZiweiPanel, QimenPanel } from '@/components/metaphysics-panels';
 
 type Saved = { id: string; input: BirthInput };
 const HISTORY_KEY = 'mingjian-bazi-v1';
@@ -166,7 +167,9 @@ export default function Home() {
           <div className="workspace-heading"><div><p className="workspace-kicker">{isExample ? '示例命盘' : '已生成命盘'}</p><h2 ref={resultsRef} tabIndex={-1} className="scroll-mt-5">{result.input.name.trim() || '未署名'}的命笺</h2><p className="workspace-caption">{result.date} · {result.input.city} · {result.pillars.map((p) => p.map((v) => v.value).join('/') || '时柱未知').join('　')}</p></div><Button variant="outline" className="min-h-11 min-[801px]:hidden" onClick={() => { setFormCollapsed(false); requestAnimationFrame(() => focusSection(formTitleRef.current)); }}>修改资料</Button></div>
           {result.warnings.length > 0 && <details className="review-notice"><summary>排盘复核提示 · {result.warnings.length} 项</summary><ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6">{result.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul></details>}
           <Tabs defaultValue="overview" className="result-tabs">
-            <TabsList variant="line" className="result-tab-list"><TabsTrigger value="overview">命盘总览</TabsTrigger><TabsTrigger value="analysis">八字分析</TabsTrigger><TabsTrigger value="details">五行藏干</TabsTrigger><TabsTrigger value="luck">大运流年</TabsTrigger></TabsList>
+            <TabsList variant="line" className="result-tab-list"><TabsTrigger value="overview">命盘总览</TabsTrigger><TabsTrigger value="analysis">八字分析</TabsTrigger><TabsTrigger value="details">五行藏干</TabsTrigger><TabsTrigger value="luck">大运流年</TabsTrigger><TabsTrigger value="ziwei">紫微斗数</TabsTrigger><TabsTrigger value="qimen">奇门遁甲</TabsTrigger></TabsList>
+            <TabsContent value="ziwei" keepMounted><ZiweiPanel key={JSON.stringify(result.input)} result={result} /></TabsContent>
+            <TabsContent value="qimen" keepMounted><QimenPanel /></TabsContent>
             <TabsContent value="overview" className="overview-panels"><ChartSheet result={result} isExample={isExample} onCopy={copy} /><LuckOverview result={result} now={now} /></TabsContent>
             <TabsContent value="analysis" keepMounted><BaziEnhancement key={JSON.stringify(result.input)} result={result} now={now} /></TabsContent>
             <TabsContent value="luck" keepMounted><LuckExplorer key={JSON.stringify(result.input)} result={result} now={now} /></TabsContent>

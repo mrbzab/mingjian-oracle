@@ -119,7 +119,7 @@
 .time-detail { padding: 12px 28px; background: var(--muted); font-size: 14px; color: var(--muted-foreground); }
 .time-detail summary { cursor: pointer; }
 .result-tabs { min-width: 0; gap: 24px; }
-.result-tab-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: 100%; height: auto !important; border: 1px solid var(--border); border-radius: 12px; padding: 5px; background: var(--card); }
+.result-tab-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; height: auto !important; border: 1px solid var(--border); border-radius: 12px; padding: 5px; background: var(--card); }
 .result-tab-list [data-slot=tabs-trigger] { min-width: 0; min-height: 46px; font-size: 15px; padding-inline: 10px; border-radius: 8px; white-space: normal; }
 .result-tab-list [data-slot=tabs-trigger][data-active] { color: var(--primary); }
 .result-tab-list [data-slot=tabs-trigger][data-active] { background: var(--accent); }
@@ -131,6 +131,14 @@
 .relations-disclosure > summary > span { margin-left: 12px; color: var(--muted-foreground); font-weight: 400; font-size: 12px; }
 .relations-disclosure li { border-radius: 6px; background: var(--muted); border: 0; }
 .site-footer { max-width: 1296px; margin: auto; border-top: 1px solid var(--border); padding: 24px 16px; font-size: 12px; color: var(--muted-foreground); line-height: 1.8; }
+.ziwei-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; }
+.ziwei-center { grid-column: 2 / 4; grid-row: 2 / 4; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px; padding: 18px; text-align: center; background: var(--muted); border-radius: 12px; }
+.ziwei-palace, .qimen-palace { min-width: 0; overflow-wrap: anywhere; border: 1px solid var(--border); border-radius: 10px; padding: 14px; background: var(--card); }
+.ziwei-soul { border-color: var(--primary); background: var(--accent); }
+.qimen-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; }
+@media (min-width: 1280px) { .result-tab-list { grid-template-columns: repeat(6,minmax(0,1fr)); } }
+@media (max-width: 1100px) { .ziwei-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } .ziwei-palace { grid-column: auto !important; grid-row: auto !important; } .ziwei-center { grid-column: 1 / -1; grid-row: auto; } }
+@media (max-width: 480px) { .qimen-grid { gap: 5px; } .qimen-palace { padding: 8px; } .qimen-palace h4 { font-size: 14px; } .ziwei-palace { padding: 12px; } }
 @media (max-width: 1100px) { .workspace { grid-template-columns: 280px minmax(0,1fr); gap: 20px; padding-inline: 20px; } .birth-panel { padding: 20px; } }
 @media (max-width: 800px) {
   .site-header { padding: 20px; } .header-note { font-size: 12px; } .brand div span { display: none; }
