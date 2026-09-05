@@ -29,6 +29,7 @@ export default function Home() {
   const [notice, setNotice] = useState('');
   const [history, setHistory] = useState<Saved[]>([]);
   const [now, setNow] = useState<string | null>(null);
+  const [formCollapsed, setFormCollapsed] = useState(false);
   const resultsRef = useRef<HTMLHeadingElement>(null);
   const formTitleRef = useRef<HTMLHeadingElement>(null);
   const rulesRef = useRef<HTMLDetailsElement>(null);
@@ -97,6 +98,7 @@ export default function Home() {
     event.preventDefault();
     try {
       const next = calculateBaZi(input);
+      if (window.matchMedia('(max-width: 800px)').matches) setFormCollapsed(true);
       shouldReveal.current = true;
       setResult(next); setIsExample(false); setError(''); setNotice(''); setNow(beijingNow());
       saveHistory([{ id: crypto.randomUUID(), input: { ...input } }, ...history].slice(0, 5));
@@ -117,6 +119,8 @@ export default function Home() {
 
       <div className="workspace">
         <aside className="birth-panel">
+          <div className="mobile-form-toggle"><Button variant="outline" aria-expanded={!formCollapsed} aria-controls="birth-fields" onClick={() => setFormCollapsed(!formCollapsed)}>{formCollapsed ? '展开出生资料' : '收起出生资料'}</Button><span>{result.date} · {result.input.city}</span></div>
+          <div id="birth-fields" className={formCollapsed ? 'birth-fields mobile-collapsed' : 'birth-fields'}>
           <h1 ref={formTitleRef} tabIndex={-1} className="mb-2 scroll-mt-5 font-serif text-2xl">出生资料</h1>
           <p className="mb-6 text-sm leading-6 text-muted-foreground">1901–2099 年 · 中国地区</p>
           <form onSubmit={submit} className="space-y-4" onInvalidCapture={(event) => {
@@ -155,17 +159,15 @@ export default function Home() {
           </form>
           <p className="mt-4 text-sm leading-6 text-muted-foreground">资料仅存于本机，计算不上传。</p>
           {history.length > 0 && <section className="mt-5 border-t pt-5"><h2 className="mb-3 flex items-center gap-2 text-base font-medium"><History className="size-4" />最近五份命盘</h2><ul className="space-y-2">{history.map((item) => <li key={item.id} className="flex items-center gap-1"><Button variant="outline" className="min-w-0 flex-1 justify-start truncate" onClick={() => restore(item)}>{item.input.name || '未署名'} · {item.input.year}/{item.input.month}/{item.input.day}</Button><Button size="icon" variant="ghost" aria-label={`删除${item.input.name || '未署名'}的记录`} onClick={() => saveHistory(history.filter((v) => v.id !== item.id))}><Trash2 /></Button></li>)}</ul></section>}
+          </div>
         </aside>
 
         <section className="results-column" aria-live="polite">
-          <div className="flex flex-wrap items-center justify-between gap-3"><h2 ref={resultsRef} tabIndex={-1} className="scroll-mt-5 text-sm font-medium text-muted-foreground">{isExample ? '命盘预览 / 示例' : '命盘预览 / 已更新'}</h2><Button variant="outline" className="min-h-11 min-[801px]:hidden" onClick={() => focusSection(formTitleRef.current)}>返回修改资料</Button></div>
-          <ChartSheet result={result} isExample={isExample} onCopy={copy} />
-          <LuckOverview result={result} now={now} />
-
-          {result.warnings.length > 0 && <aside className="rounded-2xl border border-amber-400/40 bg-amber-50 p-5 text-amber-950"><h3 className="mb-2 font-medium">不确定性与复核提示</h3><ul className="list-disc space-y-2 pl-5 text-sm leading-6">{result.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul></aside>}
-
-          <Tabs defaultValue="luck" className="result-tabs">
-            <TabsList variant="line" className="result-tab-list"><TabsTrigger value="luck">大运流年</TabsTrigger><TabsTrigger value="details">五行藏干</TabsTrigger><TabsTrigger value="analysis">八字增强 / AI</TabsTrigger></TabsList>
+          <div className="workspace-heading"><div><p className="workspace-kicker">{isExample ? '示例命盘' : '已生成命盘'}</p><h2 ref={resultsRef} tabIndex={-1} className="scroll-mt-5">{result.input.name.trim() || '未署名'}的命笺</h2><p className="workspace-caption">{result.date} · {result.input.city} · {result.pillars.map((p) => p.map((v) => v.value).join('/') || '时柱未知').join('　')}</p></div><Button variant="outline" className="min-h-11 min-[801px]:hidden" onClick={() => { setFormCollapsed(false); requestAnimationFrame(() => focusSection(formTitleRef.current)); }}>修改资料</Button></div>
+          {result.warnings.length > 0 && <details className="review-notice"><summary>排盘复核提示 · {result.warnings.length} 项</summary><ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6">{result.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul></details>}
+          <Tabs defaultValue="overview" className="result-tabs">
+            <TabsList variant="line" className="result-tab-list"><TabsTrigger value="overview">命盘总览</TabsTrigger><TabsTrigger value="analysis">八字分析</TabsTrigger><TabsTrigger value="details">五行藏干</TabsTrigger><TabsTrigger value="luck">大运流年</TabsTrigger></TabsList>
+            <TabsContent value="overview" className="overview-panels"><ChartSheet result={result} isExample={isExample} onCopy={copy} /><LuckOverview result={result} now={now} /></TabsContent>
             <TabsContent value="analysis" keepMounted><BaziEnhancement key={JSON.stringify(result.input)} result={result} now={now} /></TabsContent>
             <TabsContent value="luck" keepMounted><LuckExplorer key={JSON.stringify(result.input)} result={result} now={now} /></TabsContent>
             <TabsContent value="details">
