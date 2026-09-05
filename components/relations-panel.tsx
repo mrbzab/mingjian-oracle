@@ -13,7 +13,7 @@ export function RelationsPanel({ result, luck, flow, period }: { result: BaZiRes
     <summary>干支关系分析<span>{relations.length} 组关系 · 展开查看</span></summary>
     <p className="mt-2 text-sm leading-7 text-muted-foreground">范围：{luck ? '本命四柱＋所选大运＋流年' : '已知本命柱＋流年'}。{period}</p>
     {omitted.length > 0 && <p className="mt-2 rounded-lg bg-muted p-3 text-sm leading-7">{omitted.join('、')}未知或有多个候选，暂不参与关系分析；以下不是完整命盘结论。</p>}
-    <p className="mt-2 text-sm leading-7 text-muted-foreground">仅识别明干、地支的五合、六合、三合、六冲、刑、六害；不分析藏干暗合、半合、合化或关系强弱。不同关系可以同时存在，不互相抵消。</p>
+    <p className="mt-2 text-sm leading-7 text-muted-foreground">识别明干、地支的五合、六合、三合、六冲、刑、六害、六破；不分析藏干暗合、半合、合化或关系强弱。不同关系可以同时存在，不互相抵消。</p>
     {(['岁运参与', '本命内部'] as const).map((group) => {
       const items = relations.filter((item) => item.natal === (group === '本命内部'));
       return <div key={group} className="mt-5"><h5 className="font-medium">{group} · {items.length} 组</h5>

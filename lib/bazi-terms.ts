@@ -1,5 +1,6 @@
 // Plain-language descriptions of traditional terminology, not personal predictions.
 export const BAZI_TERMS: Record<string, string> = {
+  地支六破: '子酉、丑辰、寅亥、卯午、巳申、未戌六组配对。合与破可能同时命中，不表示现实关系必然破裂。',
   日主: '日柱的天干，是计算十神关系时的参照点。它不是对一个人性格或命运的定论。',
   十神: '把其他天干与日主之间的五行生克、阴阳同异分成十类的传统命名。正、偏等名称不等于好坏。',
   比肩: '与日主五行相同、阴阳相同的天干关系。例如甲日主见甲。不代表一定有人帮助或竞争。',

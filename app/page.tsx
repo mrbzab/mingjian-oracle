@@ -166,7 +166,7 @@ export default function Home() {
 
           <Tabs defaultValue="luck" className="result-tabs">
             <TabsList variant="line" className="result-tab-list"><TabsTrigger value="luck">大运流年</TabsTrigger><TabsTrigger value="details">五行藏干</TabsTrigger><TabsTrigger value="analysis">八字增强 / AI</TabsTrigger></TabsList>
-            <TabsContent value="analysis" keepMounted><BaziEnhancement key={JSON.stringify(result.input)} result={result} /></TabsContent>
+            <TabsContent value="analysis" keepMounted><BaziEnhancement key={JSON.stringify(result.input)} result={result} now={now} /></TabsContent>
             <TabsContent value="luck" keepMounted><LuckExplorer key={JSON.stringify(result.input)} result={result} now={now} /></TabsContent>
             <TabsContent value="details">
 

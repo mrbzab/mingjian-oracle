@@ -12,6 +12,7 @@ export function comparisonNodes(pillars: Array<Array<{ value: string }>>, luck: 
 // https://zh.wikisource.org/wiki/三命通會/卷二
 // This is structural matching only: no strength, distance, transformation, or event prediction.
 const PAIRS = [
+  { kind: '地支六破', at: 1, pairs: ['子酉', '丑辰', '寅亥', '卯午', '巳申', '未戌'], reading: '传统相破配对，按命语六破表识别。合与破可以同时存在，不据单一关系推断婚姻、事业或财务结果。' },
   { kind: '天干五合', at: 0, pairs: ['甲己', '乙庚', '丙辛', '丁壬', '戊癸'], reading: '传统上以“合”讨论联结或牵制；本页未判断合化条件，不能据此断为吉。' },
   { kind: '地支六合', at: 1, pairs: ['子丑', '寅亥', '卯戌', '辰酉', '巳申', '午未'], reading: '传统上用来讨论支之间的配合或牵连；有合不等于和睦，也不自动合化。' },
   { kind: '地支六冲', at: 1, pairs: ['子午', '丑未', '寅申', '卯酉', '辰戌', '巳亥'], reading: '传统上用来讨论相对或变动；仅凭这一组不能判断搬迁、分离或其他事件。' },
