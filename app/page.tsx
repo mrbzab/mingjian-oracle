@@ -17,6 +17,7 @@ import { Solar } from 'lunar-typescript';
 import { BaziEnhancement } from '@/components/bazi-enhancement';
 import { ZiweiPanel, QimenPanel } from '@/components/metaphysics-panels';
 import { SynthesisPanel } from '@/components/synthesis-panel';
+import { resolveZiweiDate, matchingZiwei, matchingQimen } from '@/lib/workspace-state';
 import type { ZiweiResult, QimenResult } from '@/lib/metaphysics';
 
 type Saved = { id: string; input: BirthInput };
@@ -38,7 +39,38 @@ export default function Home() {
   const birthKey = JSON.stringify(result.input);
   const [ziweiSnapshot, setZiweiSnapshot] = useState<{birthKey:string;data:ZiweiResult} | null>(null);
   const [qimenSnapshot, setQimenSnapshot] = useState<QimenResult | null>(null);
-  const currentZiwei = ziweiSnapshot?.birthKey === birthKey && Number(ziweiSnapshot.data.horoscope?.date.slice(0,4)) === year ? ziweiSnapshot.data : null;
+  const [ziweiAlgorithm, setZiweiAlgorithm] = useState<'default'|'zhongzhou'>('default');
+  const [pickedZiweiDate, setPickedZiweiDate] = useState<string|null>(null);
+  const ziweiDate = resolveZiweiDate(result.date,year,pickedZiweiDate);
+  const [qimenTime, setQimenTime] = useState('');
+  const [refreshing,setRefreshing] = useState(false);
+  const [refreshToken,setRefreshToken] = useState(0);
+  const [refreshError,setRefreshError] = useState('');
+  const draftChanged = JSON.stringify(input) !== birthKey;
+  const currentQimen = matchingQimen(qimenSnapshot,qimenTime);
+  function changeYear(value:number) { if(!refreshing && Number.isInteger(value) && value >= 1901 && value <= 2199) setChosenYear(value); }
+  async function refreshAll() {
+    setRefreshing(true); setRefreshError('');
+    try {
+      const next = calculateBaZi(input);
+      const nextYear = year;
+      const date = resolveZiweiDate(next.date,nextYear,pickedZiweiDate);
+      setResult(next); setIsExample(false); setChosenYear(nextYear); setError('');
+      setZiweiSnapshot(null); setQimenSnapshot(null);
+      const engine = await import('@/lib/metaphysics');
+      const errors:string[] = [];
+      if(!next.input.unknownTime && next.input.gender !== 'unknown') {
+        try { const data=await engine.calculateZiwei(next,ziweiAlgorithm,date);setZiweiSnapshot({birthKey:JSON.stringify(next.input),data}); }
+        catch(e){errors.push(e instanceof Error?e.message:'紫微更新失败');}
+      } else errors.push('紫微需补全出生时刻与男命／女命口径。');
+      if(qimenTime) { try { setQimenSnapshot(await engine.calculateQimen(qimenTime)); } catch(e){errors.push(e instanceof Error?e.message:'奇门更新失败');} }
+      else errors.push('奇门尚未填写起局时间，已跳过。');
+      setRefreshToken(v=>v+1);setRefreshError(errors.join(' '));
+      setNotice('可用命盘已更新；综合摘要已同步，完整材料正在整理。');
+    } catch(e) { setRefreshError(e instanceof Error?e.message:'更新未完成，请检查资料。'); }
+    finally {setRefreshing(false);}
+  }
+  const currentZiwei = matchingZiwei(ziweiSnapshot,birthKey,ziweiDate,ziweiAlgorithm);
   const resultsRef = useRef<HTMLHeadingElement>(null);
   const formTitleRef = useRef<HTMLHeadingElement>(null);
   const rulesRef = useRef<HTMLDetailsElement>(null);
@@ -127,7 +159,7 @@ export default function Home() {
       <header className="site-header"><div className="brand"><span className="brand-seal">命</span><div><p>命笺</p><span>四柱八字</span></div></div><span className="header-note">传统文化 · 理性解读</span></header>
 
       <div className="workspace">
-        <aside className="birth-panel">
+        <aside className="birth-panel"><fieldset disabled={refreshing} className="min-w-0">
           <div className="mobile-form-toggle"><Button variant="outline" aria-expanded={!formCollapsed} aria-controls="birth-fields" onClick={() => setFormCollapsed(!formCollapsed)}>{formCollapsed ? '展开出生资料' : '收起出生资料'}</Button><span>{result.date} · {result.input.city}</span></div>
           <div id="birth-fields" className={formCollapsed ? 'birth-fields mobile-collapsed' : 'birth-fields'}>
           <h1 ref={formTitleRef} tabIndex={-1} className="mb-2 scroll-mt-5 font-serif text-2xl">出生资料</h1>
@@ -169,19 +201,20 @@ export default function Home() {
           <p className="mt-4 text-sm leading-6 text-muted-foreground">排盘与解读资料整理均在本机完成，可自行复制提示词。</p>
           {history.length > 0 && <section className="mt-5 border-t pt-5"><h2 className="mb-3 flex items-center gap-2 text-base font-medium"><History className="size-4" />最近五份命盘</h2><ul className="space-y-2">{history.map((item) => <li key={item.id} className="flex items-center gap-1"><Button variant="outline" className="min-w-0 flex-1 justify-start truncate" onClick={() => restore(item)}>{item.input.name || '未署名'} · {item.input.year}/{item.input.month}/{item.input.day}</Button><Button size="icon" variant="ghost" aria-label={`删除${item.input.name || '未署名'}的记录`} onClick={() => saveHistory(history.filter((v) => v.id !== item.id))}><Trash2 /></Button></li>)}</ul></section>}
           </div>
-        </aside>
+        </fieldset></aside>
 
         <section className="results-column" aria-live="polite">
           <div className="workspace-heading"><div><p className="workspace-kicker">{isExample ? '示例命盘' : '已生成命盘'}</p><h2 ref={resultsRef} tabIndex={-1} className="scroll-mt-5">{result.input.name.trim() || '未署名'}的命笺</h2><p className="workspace-caption">{result.date} · {result.input.city} · {result.pillars.map((p) => p.map((v) => v.value).join('/') || '时柱未知').join('　')}</p></div><Button variant="outline" className="min-h-11 min-[801px]:hidden" onClick={() => { setFormCollapsed(false); requestAnimationFrame(() => focusSection(formTitleRef.current)); }}>修改资料</Button></div>
+          <section className="workspace-context" aria-label="当前资料与更新状态"><div className="context-facts"><p><span>当前出生资料</span><strong>{result.date} · {result.input.unknownTime ? '时刻未知' : result.input.time} · {result.input.city}</strong></p><div><Label htmlFor="workspace-year">关注年份</Label><NativeSelect id="workspace-year" value={year} disabled={refreshing} onChange={e=>changeYear(Number(e.target.value))}>{Array.from({length:299},(_,i)=>1901+i).map(v=><NativeSelectOption key={v} value={v}>{v} 年</NativeSelectOption>)}</NativeSelect></div><p><span>奇门起局 · 北京时间</span><strong>{qimenTime ? qimenTime.replace('T',' ') : '尚未填写'}</strong></p></div><div className="context-actions"><p role="status">{draftChanged ? '出生资料已修改：八字、紫微和综合资料待更新。' : '八字：当前资料'} · 紫微：{draftChanged ? '待出生资料更新' : currentZiwei ? '已同步 · '+ziweiDate : '待生成／更新'} · 奇门：{currentQimen ? '已同步' : qimenTime ? '待生成／更新' : '待填起局时间'}</p><Button onClick={refreshAll} disabled={refreshing}>{refreshing ? '正在更新…' : '一键更新命盘与综合资料'}</Button></div>{refreshError && <p role="alert" className="mt-3 text-sm leading-6">{refreshError}</p>}</section>
           {result.warnings.length > 0 && <details className="review-notice"><summary>排盘复核提示 · {result.warnings.length} 项</summary><ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6">{result.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul></details>}
           <Tabs defaultValue="overview" className="result-tabs">
             <TabsList variant="line" className="result-tab-list"><TabsTrigger value="overview">命盘总览</TabsTrigger><TabsTrigger value="analysis">八字分析</TabsTrigger><TabsTrigger value="details">五行藏干</TabsTrigger><TabsTrigger value="luck">大运流年</TabsTrigger><TabsTrigger value="ziwei">紫微斗数</TabsTrigger><TabsTrigger value="qimen">奇门遁甲</TabsTrigger><TabsTrigger className="synthesis-trigger" value="synthesis">综合解读</TabsTrigger></TabsList>
-            <TabsContent value="ziwei" keepMounted><ZiweiPanel key={birthKey} result={result} year={year} onYearChange={setChosenYear} onResult={(data) => setZiweiSnapshot(data ? {birthKey,data} : null)} /></TabsContent>
-            <TabsContent value="qimen" keepMounted><QimenPanel onResult={setQimenSnapshot} /></TabsContent>
-            <TabsContent value="synthesis" keepMounted><SynthesisPanel key={birthKey} result={result} year={year} ziwei={currentZiwei} qimen={qimenSnapshot} /></TabsContent>
+            <TabsContent value="ziwei" keepMounted><ZiweiPanel result={result} data={currentZiwei} targetDate={ziweiDate} algorithm={ziweiAlgorithm} locked={refreshing} onDateChange={(v)=>{setPickedZiweiDate(v);if (/^\d{4}-\d{2}-\d{2}$/.test(v)) changeYear(Number(v.slice(0,4)));}} onAlgorithmChange={setZiweiAlgorithm} onResult={(data) => setZiweiSnapshot(data ? {birthKey,data} : null)} /></TabsContent>
+            <TabsContent value="qimen" keepMounted><QimenPanel data={currentQimen} time={qimenTime} onTimeChange={setQimenTime} locked={refreshing} onResult={setQimenSnapshot} /></TabsContent>
+            <TabsContent value="synthesis" keepMounted><SynthesisPanel key={birthKey} result={result} year={year} ziwei={currentZiwei} qimen={currentQimen} refreshToken={refreshToken} /></TabsContent>
             <TabsContent value="overview" className="overview-panels"><ChartSheet result={result} isExample={isExample} onCopy={copy} /><LuckOverview result={result} now={now} /></TabsContent>
-            <TabsContent value="analysis" keepMounted><BaziEnhancement key={birthKey} result={result} year={year} onYearChange={setChosenYear} /></TabsContent>
-            <TabsContent value="luck" keepMounted><LuckExplorer key={JSON.stringify(result.input)} result={result} now={now} sharedYear={year} onYearChange={setChosenYear} /></TabsContent>
+            <TabsContent value="analysis" keepMounted><BaziEnhancement key={birthKey} result={result} year={year} onYearChange={changeYear} refreshToken={refreshToken} /></TabsContent>
+            <TabsContent value="luck" keepMounted><LuckExplorer key={JSON.stringify(result.input)} result={result} now={now} sharedYear={year} onYearChange={changeYear} /></TabsContent>
             <TabsContent value="details">
 
           <section className="panel"><h3 className="section-title"><TermHelp term="藏干" />与<TermHelp term="十神" /></h3><Table><TableHeader><TableRow><TableHead>柱位</TableHead><TableHead>干支</TableHead><TableHead>藏干 · 五行 · 十神</TableHead></TableRow></TableHeader><TableBody>{result.pillars.flatMap((options, i) => options.map((p) => <TableRow key={`${i}-${p.value}`}><TableCell>{labels[i]}</TableCell><TableCell>{p.value}</TableCell><TableCell className="whitespace-normal leading-7">{p.hidden.map((h) => <span key={h.gan} className="mr-3 inline-block">{h.gan}{h.element} · <TermHelp term={h.tenGod} /></span>)}</TableCell></TableRow>))}</TableBody></Table>

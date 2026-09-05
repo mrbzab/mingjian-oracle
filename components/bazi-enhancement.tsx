@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,7 +11,7 @@ import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@
 import { formatReport, type BaZiResult } from '@/lib/bazi';
 import type { BaZiEnhancement } from '@/lib/bazi-enhancement';
 
-export function BaziEnhancement({ result, year, onYearChange }: { result: BaZiResult; year:number; onYearChange:(year:number)=>void }) {
+export function BaziEnhancement({ result, year, onYearChange, refreshToken = 0 }: { result: BaZiResult; year:number; refreshToken?:number; onYearChange:(year:number)=>void }) {
   const [analysis, setAnalysis] = useState<BaZiEnhancement | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -27,19 +27,25 @@ export function BaziEnhancement({ result, year, onYearChange }: { result: BaZiRe
   const stale = !!analysis && generatedInputs !== inputKey;
   const complete = !result.input.unknownTime && result.pillars.every((p) => p.length === 1);
 
+  const generation=useRef(0);
+  useEffect(()=>{generation.current++;return()=>{generation.current++;};},[inputKey,result]);
   async function generate() {
+    const request=++generation.current;
     setBusy(true); setError(''); setNotice('');
     try {
       const engine = await import('@/lib/bazi-enhancement');
       const next = engine.enhanceBaZi(result);
       const nextContext = buildYearContext(result, year);
+      if(request!==generation.current)return;
       setAnalysis(next);
       setContext(nextContext);
       setPrompt(engine.buildInterpretationPrompt(formatReport(result), next, question, nextContext, { claim: claim.trim(), observation: observation.trim() }));
       setGeneratedInputs(inputKey);
-    } catch (e) { setError(e instanceof Error ? e.message : '增强分析暂时无法生成，请重试。'); }
+    } catch (e) { if(request===generation.current)setError(e instanceof Error ? e.message : '增强分析暂时无法生成，请重试。'); }
     finally { setBusy(false); }
   }
+
+  useEffect(() => { if(refreshToken && complete) void generate(); }, [refreshToken]);
 
   async function copy() {
     try { await navigator.clipboard.writeText(prompt); setNotice('提示词已复制，可粘贴到你使用的 AI 中。'); }

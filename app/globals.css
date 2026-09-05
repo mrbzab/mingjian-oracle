@@ -164,3 +164,51 @@
   .analysis-tab-list [data-slot=tabs-trigger] { padding-inline: 8px; }
 }
 @media (max-width: 360px) { .workspace { padding-inline: 10px; } .birth-panel { padding: 16px; } .pillar-characters { font-size: 30px; } .pillar-god { font-size: 13px; } }
+
+/* Shared working context and linked palace reading. */
+.workspace-context { position: sticky; top: 8px; z-index: 20; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; box-shadow: 0 4px 14px #00000008; }
+.context-facts { display: grid; grid-template-columns: 1.3fr 140px 1fr; gap: 16px; align-items: start; }
+.context-facts p { min-width: 0; overflow-wrap: anywhere; line-height: 1.7; }
+.context-facts span { display: block; color: var(--muted-foreground); font-size: 14px; }
+.context-facts strong { font-size: 14px; font-weight: 500; }
+.context-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.context-actions p { font-size: 14px; line-height: 1.7; }
+.context-actions button { white-space: normal; height: auto; min-height: 44px; flex-shrink: 0; }
+.palace-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.palace-toolbar [data-slot=native-select-wrapper] { max-width: 180px; }
+.ziwei-palace.palace-selected,.qimen-palace.palace-selected { border: 2px solid var(--primary); box-shadow: inset 0 0 0 1px var(--primary); background: var(--accent); }
+.ziwei-palace.palace-related { border: 2px dashed var(--primary); background: var(--accent); }
+.palace-relation-label { font-size: 14px; color: var(--primary); font-weight: 600; }
+.palace-transformations { font-size: 14px; line-height: 1.8; color: var(--primary); }
+.palace-layout-list { grid-template-columns: minmax(0,1fr); }
+.palace-layout-list .ziwei-palace,.palace-layout-list .ziwei-center { grid-column: auto !important; grid-row: auto !important; }
+.palace-layout-list .ziwei-center { align-items: start; text-align: left; }
+.palace-navigation { display: grid; gap: 10px; background: var(--popover); }
+.palace-navigation button { min-height: 44px; }
+.summary-source { border: 1px solid var(--border); border-radius: 12px; padding: 20px; overflow-wrap: anywhere; }
+@media (max-width: 800px) {
+  .workspace-context { position: static; }
+  .context-facts { grid-template-columns: minmax(0,1fr) 120px; gap: 12px; }
+  .context-facts > :last-child { grid-column: 1 / -1; }
+  .context-actions { align-items: stretch; flex-direction: column; }
+  .ziwei-grid.palace-layout-auto,.qimen-grid.palace-layout-auto { grid-template-columns: minmax(0,1fr); }
+  .palace-layout-auto .ziwei-palace,.palace-layout-auto .ziwei-center { grid-column: auto !important; grid-row: auto !important; }
+  .palace-detail-sheet[data-slot=sheet-content] { width: 100%; max-width: 100%; font-size: 16px; padding-bottom: env(safe-area-inset-bottom); }
+  .palace-navigation { position: sticky; top: 0; z-index: 1; padding-block: 10px; }
+  .summary-source { padding: 16px; }
+  .palace-toolbar { display: grid; grid-template-columns: auto minmax(0,1fr); }
+  .palace-toolbar [data-slot=native-select-wrapper] { max-width: none; }
+}
+.workspace-context select,.palace-toolbar select,.palace-navigation select,.palace-detail-sheet select { min-height: 44px; }
+@media (min-width: 801px) and (max-width: 1100px) { .context-facts { grid-template-columns: minmax(0,1fr) 120px; } .context-facts > :last-child {grid-column:1 / -1;} .context-actions {flex-direction:column;align-items:stretch;} }
+@media (max-width: 800px) { .ziwei-grid.palace-layout-grid {grid-template-columns: repeat(2,minmax(0,1fr));} .palace-layout-grid .ziwei-center {grid-column:1 / -1;} }
+@media (max-width: 800px) {
+  .ziwei-grid.palace-layout-grid { grid-template-columns: repeat(4,minmax(0,1fr)); gap: 4px; }
+  .palace-layout-grid .ziwei-palace { grid-column: var(--palace-column) !important; grid-row: var(--palace-row) !important; padding: 5px; }
+  .palace-layout-grid .ziwei-center { grid-column: 2 / 4; grid-row: 2 / 4; padding: 8px; gap: 8px; }
+  .palace-layout-grid .ziwei-center h4 {font-size:18px;}
+  .palace-layout-grid .ziwei-center p {font-size:14px;}
+  .palace-layout-grid .ziwei-palace > :not(:first-child):not(.palace-relation-label) {display:none;}
+  .palace-layout-grid .ziwei-palace .palace-open { font-size:14px; overflow-wrap:anywhere; }
+  .palace-layout-grid .ziwei-palace > :first-child { gap: 0; }
+}
