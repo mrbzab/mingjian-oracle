@@ -49,12 +49,15 @@ export default function Home() {
   const draftChanged = JSON.stringify(input) !== birthKey;
   const currentQimen = matchingQimen(qimenSnapshot,qimenTime);
   function changeYear(value:number) { if(!refreshing && Number.isInteger(value) && value >= 1901 && value <= 2199) setChosenYear(value); }
+  useEffect(() => { setRefreshError(''); setNotice(''); }, [input, year, ziweiDate, ziweiAlgorithm, qimenTime]);
   async function refreshAll() {
     setRefreshing(true); setRefreshError('');
     try {
       const next = calculateBaZi(input);
       const nextYear = year;
       const date = resolveZiweiDate(next.date,nextYear,pickedZiweiDate);
+      if(window.matchMedia('(max-width: 800px)').matches) setFormCollapsed(true);
+      shouldReveal.current = true;
       setResult(next); setIsExample(false); setChosenYear(nextYear); setError('');
       setZiweiSnapshot(null); setQimenSnapshot(null);
       const engine = await import('@/lib/metaphysics');
@@ -66,7 +69,7 @@ export default function Home() {
       if(qimenTime) { try { setQimenSnapshot(await engine.calculateQimen(qimenTime)); } catch(e){errors.push(e instanceof Error?e.message:'奇门更新失败');} }
       else errors.push('奇门尚未填写起局时间，已跳过。');
       setRefreshToken(v=>v+1);setRefreshError(errors.join(' '));
-      setNotice('可用命盘已更新；综合摘要已同步，完整材料正在整理。');
+      setNotice('可用命盘已更新，综合摘要已同步。');
     } catch(e) { setRefreshError(e instanceof Error?e.message:'更新未完成，请检查资料。'); }
     finally {setRefreshing(false);}
   }

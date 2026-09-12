@@ -166,7 +166,7 @@
 @media (max-width: 360px) { .workspace { padding-inline: 10px; } .birth-panel { padding: 16px; } .pillar-characters { font-size: 30px; } .pillar-god { font-size: 13px; } }
 
 /* Shared working context and linked palace reading. */
-.workspace-context { position: sticky; top: 8px; z-index: 20; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; box-shadow: 0 4px 14px #00000008; }
+.workspace-context { position: relative; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; box-shadow: 0 4px 14px #00000008; }
 .context-facts { display: grid; grid-template-columns: 1.3fr 140px 1fr; gap: 16px; align-items: start; }
 .context-facts p { min-width: 0; overflow-wrap: anywhere; line-height: 1.7; }
 .context-facts span { display: block; color: var(--muted-foreground); font-size: 14px; }
@@ -211,4 +211,13 @@
   .palace-layout-grid .ziwei-palace > :not(:first-child):not(.palace-relation-label) {display:none;}
   .palace-layout-grid .ziwei-palace .palace-open { font-size:14px; overflow-wrap:anywhere; }
   .palace-layout-grid .ziwei-palace > :first-child { gap: 0; }
+}
+
+/* Keep long interpretation material inside its editor instead of expanding the page. */
+#synthesis-prompt, #ziwei-prompt, #qimen-prompt, #analysis-prompt {
+  field-sizing: fixed;
+  height: 24rem;
+  max-height: 55dvh;
+  min-height: 12rem;
+  overflow-y: auto;
 }

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
+import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { buildYearContext, type YearContext } from '@/lib/bazi-year-context';
 import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@/components/ui/table';
@@ -57,7 +57,7 @@ export function BaziEnhancement({ result, year, onYearChange, refreshToken = 0 }
       <p className="text-sm leading-6 text-muted-foreground">使用当前四柱，补充身强弱、格局、用神与十神结构。分析在本机完成；提示词可交给你选择的 AI 解读。</p></div>
     {!complete && <p className="rounded-xl bg-primary/5 p-4 text-sm leading-6">出生时刻未知或四柱尚未确定。请先补充出生资料，现有候选命盘仍可查看。</p>}
     <div className="analysis-inputs"><div className="space-y-2"><Label htmlFor="analysis-question">想了解的问题（选填）</Label><Textarea id="analysis-question" value={question} maxLength={2000} onChange={(e) => setQuestion(e.target.value)} placeholder="例如：十神结构如何理解？身强弱判断依据是什么？" /></div>
-    <div className="space-y-2"><Label htmlFor="analysis-year">关注流年（与紫微联动）</Label><Input id="analysis-year" type="number" min={1901} max={2199} value={year || ''} onChange={(e) => onYearChange(Number(e.target.value))} className="max-w-48" /><p className="text-sm leading-6 text-muted-foreground">自动找出这一流年覆盖的大运；遇到交运，分段列出，不将两步大运混算。</p></div>
+    <div className="space-y-2"><Label htmlFor="analysis-year">关注流年（与紫微联动）</Label><NativeSelect id="analysis-year" value={year} onChange={(e) => onYearChange(Number(e.target.value))} className="max-w-48">{Array.from({length:299},(_,i)=>1901+i).map(v=><NativeSelectOption key={v} value={v}>{v} 年</NativeSelectOption>)}</NativeSelect><p className="text-sm leading-6 text-muted-foreground">自动找出这一流年覆盖的大运；遇到交运，分段列出，不将两步大运混算。</p></div>
     </div><details className="rounded-xl border p-4"><summary className="cursor-pointer font-medium">反馈与复核（选填）</summary><div className="mt-4 space-y-3"><Label htmlFor="feedback-claim">哪条解读需要核对？</Label><Textarea id="feedback-claim" value={claim} maxLength={2000} onChange={(e) => setClaim(e.target.value)} placeholder="粘贴具体解读，或描述认为遗漏的因素" /><Label htmlFor="feedback-observation">实际情况或不确定之处</Label><Textarea id="feedback-observation" value={observation} maxLength={3000} onChange={(e) => setObservation(e.target.value)} placeholder="可写时间、实际经历，或说明目前无法确认" /><p className="text-sm leading-6 text-muted-foreground">仅加入本次提示词，刷新后清空。不会自动上传、训练模型或据此调整四柱。</p></div></details>
     <Button disabled={!complete || busy} onClick={generate}>{busy ? '正在生成…' : analysis ? '重新生成分析与提示词' : '生成分析与提示词'}</Button>
     {stale && <p role="status" className="rounded-xl bg-primary/5 p-4 text-sm leading-6">输入已修改，下方仍是上次生成的结果。请重新生成后再复制。</p>}
