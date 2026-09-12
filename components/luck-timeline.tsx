@@ -1,0 +1,9 @@
+'use client';
+import {useMemo} from 'react';
+import {Button} from '@/components/ui/button';
+import {timelineWindow} from '@/lib/luck-timeline';
+import type {BaZiResult} from '@/lib/bazi';
+export function LuckTimeline({result,year,onSelect,busy,message}:{result:BaZiResult;year:number;onSelect:(year:number)=>void;busy:boolean;message:string}) {
+ const items=useMemo(()=>timelineWindow(result,year),[result,year]);const current=items.find(v=>v.year===year)!;
+ return <section className="panel space-y-5" aria-label="岁运时间轴"><div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="section-title mb-1">岁运时间轴</h3><p className="text-sm leading-7 text-muted-foreground">点击年份联动八字并更新紫微运限，奇门保持独立起局时刻。</p></div><div className="flex gap-2"><Button variant="outline" disabled={busy||year<=1901} onClick={()=>onSelect(Math.max(1901,year-5))}>往前五年</Button><Button variant="outline" disabled={busy||year>=2199} onClick={()=>onSelect(Math.min(2199,year+5))}>往后五年</Button></div></div><div className="year-timeline">{items.map(item=><button type="button" key={item.year} aria-pressed={item.year===year} disabled={busy} onClick={()=>onSelect(item.year)} className="timeline-year"><span className="text-sm">{item.year} 年</span><strong className="font-serif text-2xl">{item.pillar}</strong><span className="text-sm">{[...new Set(item.segments.map(s=>s.luck||'无所列大运'))].join(' → ')}</span>{item.handover&&<span className="timeline-marker">交运分界</span>}</button>)}</div><div className="rounded-xl bg-muted p-4"><h4 className="font-medium">{year} 年的实际适用时段</h4><ul className="mt-3 space-y-3 text-sm leading-7">{current.segments.map(s=><li key={s.start}><strong>{s.luck?s.luck+'大运':'无对应大运'}</strong> · {s.start.replace('T',' ')} 至 {s.end.replace('T',' ')}（不含）<p className="text-muted-foreground">{s.note}</p></li>)}</ul></div><p role="status" className="text-sm leading-7">{busy?'正在同步所选年份…':message||'八字以立春划分流年；紫微使用所选年份的具体运限日期，口径分别展示。'}</p></section>;
+}

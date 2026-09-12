@@ -1,7 +1,10 @@
 'use client';
 
 import { type SyntheticEvent, useEffect, useRef, useState } from 'react';
-import { History, ScrollText, Trash2 } from 'lucide-react';
+import { ScrollText } from 'lucide-react';
+import { ReportPanel } from '@/components/report-panel';
+import { ArchivePanel } from '@/components/archive-panel';
+import { LuckTimeline } from '@/components/luck-timeline';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,8 +23,7 @@ import { SynthesisPanel } from '@/components/synthesis-panel';
 import { resolveZiweiDate, matchingZiwei, matchingQimen } from '@/lib/workspace-state';
 import type { ZiweiResult, QimenResult } from '@/lib/metaphysics';
 
-type Saved = { id: string; input: BirthInput };
-const HISTORY_KEY = 'mingjian-bazi-v1';
+
 const example = calculateBaZi(DEFAULT_INPUT);
 const labels = ['年柱', '月柱', '日柱', '时柱'];
 
@@ -31,7 +33,10 @@ export default function Home() {
   const [isExample, setIsExample] = useState(true);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const [history, setHistory] = useState<Saved[]>([]);
+  const [activeTab,setActiveTab] = useState('overview');
+  const [timelineEnabled,setTimelineEnabled] = useState(false);
+  const [timelineBusy,setTimelineBusy] = useState(false);
+  const [timelineMessage,setTimelineMessage] = useState('');
   const [now, setNow] = useState<string | null>(null);
   const [formCollapsed, setFormCollapsed] = useState(false);
   const [chosenYear, setChosenYear] = useState<number | null>(null);
@@ -74,6 +79,13 @@ export default function Home() {
     finally {setRefreshing(false);}
   }
   const currentZiwei = matchingZiwei(ziweiSnapshot,birthKey,ziweiDate,ziweiAlgorithm);
+  useEffect(()=>{
+    if(!timelineEnabled||refreshing)return;
+    let cancelled=false;setTimelineBusy(true);setTimelineMessage('');
+    if(result.input.unknownTime||result.input.gender==='unknown'){setTimelineMessage('八字已联动；紫微需补全出生时刻与性别口径。');setTimelineBusy(false);return;}
+    import('@/lib/metaphysics').then(engine=>engine.calculateZiwei(result,ziweiAlgorithm,ziweiDate)).then(data=>{if(!cancelled){setZiweiSnapshot({birthKey,data});setTimelineMessage('八字与紫微已同步至 '+year+' 年；紫微运限日期 '+ziweiDate+'。');}}).catch(e=>{if(!cancelled)setTimelineMessage('八字已联动；紫微：'+(e instanceof Error?e.message:'更新未完成'));}).finally(()=>{if(!cancelled)setTimelineBusy(false);});
+    return()=>{cancelled=true;};
+  },[timelineEnabled,refreshing,result,year,ziweiDate,ziweiAlgorithm,birthKey]);
   const resultsRef = useRef<HTMLHeadingElement>(null);
   const formTitleRef = useRef<HTMLHeadingElement>(null);
   const rulesRef = useRef<HTMLDetailsElement>(null);
@@ -98,18 +110,6 @@ export default function Home() {
   }, [error]);
 
   useEffect(() => {
-    try {
-      const parsed: unknown = JSON.parse(localStorage.getItem(HISTORY_KEY) ?? '[]');
-      if (Array.isArray(parsed)) {
-        const valid = parsed.slice(0, 5).filter((item): item is Saved => {
-          try { if (!item || typeof item.id !== 'string' || !item.input) return false; calculateBaZi(item.input); return true; }
-          catch { return false; }
-        });
-        // One-time hydration of explicitly device-local history.
-        // oxlint-disable-next-line react/react-compiler
-        setHistory(valid);
-      }
-    } catch { /* Storage can be disabled; calculation remains available. */ }
     const refreshClock = () => setNow(beijingNow());
     refreshClock();
     const interval = window.setInterval(refreshClock, 60_000);
@@ -133,11 +133,6 @@ export default function Home() {
       setError('');
     } catch (e) { setError(e instanceof Error ? e.message : '请先填写有效日期再切换历法。'); }
   }
-  function saveHistory(items: Saved[]) {
-    setHistory(items);
-    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(items)); }
-    catch { setNotice('此浏览器无法保存记录，但本次排盘已完成。'); }
-  }
   function submit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     try {
@@ -145,11 +140,11 @@ export default function Home() {
       if (window.matchMedia('(max-width: 800px)').matches) setFormCollapsed(true);
       shouldReveal.current = true;
       setResult(next); setIsExample(false); setError(''); setNotice(''); setNow(beijingNow());
-      saveHistory([{ id: crypto.randomUUID(), input: { ...input } }, ...history].slice(0, 5));
+
     } catch (e) { setError(e instanceof Error ? e.message : '排盘未完成，请检查出生资料。'); }
   }
-  function restore(saved: Saved) {
-    try { const next = calculateBaZi(saved.input); shouldReveal.current = true; setResult(next); setInput(saved.input); setIsExample(false); setError(''); setNow(beijingNow()); }
+  function restore(saved: BirthInput) {
+    try { const next = calculateBaZi(saved); shouldReveal.current = true; setActiveTab('overview'); setFormCollapsed(true); setZiweiSnapshot(null); setResult(next); setInput(saved); setIsExample(false); setError(''); setNow(beijingNow()); }
     catch { setError('此记录无效或不适用于当前规则，请重新填写。'); }
   }
   async function copy() {
@@ -202,7 +197,7 @@ export default function Home() {
             <Button type="submit" className="h-12 w-full rounded-xl text-base"><ScrollText />排出命盘</Button>
           </form>
           <p className="mt-4 text-sm leading-6 text-muted-foreground">排盘与解读资料整理均在本机完成，可自行复制提示词。</p>
-          {history.length > 0 && <section className="mt-5 border-t pt-5"><h2 className="mb-3 flex items-center gap-2 text-base font-medium"><History className="size-4" />最近五份命盘</h2><ul className="space-y-2">{history.map((item) => <li key={item.id} className="flex items-center gap-1"><Button variant="outline" className="min-w-0 flex-1 justify-start truncate" onClick={() => restore(item)}>{item.input.name || '未署名'} · {item.input.year}/{item.input.month}/{item.input.day}</Button><Button size="icon" variant="ghost" aria-label={`删除${item.input.name || '未署名'}的记录`} onClick={() => saveHistory(history.filter((v) => v.id !== item.id))}><Trash2 /></Button></li>)}</ul></section>}
+
           </div>
         </fieldset></aside>
 
@@ -210,14 +205,16 @@ export default function Home() {
           <div className="workspace-heading"><div><p className="workspace-kicker">{isExample ? '示例命盘' : '已生成命盘'}</p><h2 ref={resultsRef} tabIndex={-1} className="scroll-mt-5">{result.input.name.trim() || '未署名'}的命笺</h2><p className="workspace-caption">{result.date} · {result.input.city} · {result.pillars.map((p) => p.map((v) => v.value).join('/') || '时柱未知').join('　')}</p></div><Button variant="outline" className="min-h-11 min-[801px]:hidden" onClick={() => { setFormCollapsed(false); requestAnimationFrame(() => focusSection(formTitleRef.current)); }}>修改资料</Button></div>
           <section className="workspace-context" aria-label="当前资料与更新状态"><div className="context-facts"><p><span>当前出生资料</span><strong>{result.date} · {result.input.unknownTime ? '时刻未知' : result.input.time} · {result.input.city}</strong></p><div><Label htmlFor="workspace-year">关注年份</Label><NativeSelect id="workspace-year" value={year} disabled={refreshing} onChange={e=>changeYear(Number(e.target.value))}>{Array.from({length:299},(_,i)=>1901+i).map(v=><NativeSelectOption key={v} value={v}>{v} 年</NativeSelectOption>)}</NativeSelect></div><p><span>奇门起局 · 北京时间</span><strong>{qimenTime ? qimenTime.replace('T',' ') : '尚未填写'}</strong></p></div><div className="context-actions"><p role="status">{draftChanged ? '出生资料已修改：八字、紫微和综合资料待更新。' : '八字：当前资料'} · 紫微：{draftChanged ? '待出生资料更新' : currentZiwei ? '已同步 · '+ziweiDate : '待生成／更新'} · 奇门：{currentQimen ? '已同步' : qimenTime ? '待生成／更新' : '待填起局时间'}</p><Button onClick={refreshAll} disabled={refreshing}>{refreshing ? '正在更新…' : '一键更新命盘与综合资料'}</Button></div>{refreshError && <p role="alert" className="mt-3 text-sm leading-6">{refreshError}</p>}</section>
           {result.warnings.length > 0 && <details className="review-notice"><summary>排盘复核提示 · {result.warnings.length} 项</summary><ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6">{result.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul></details>}
-          <Tabs defaultValue="overview" className="result-tabs">
-            <TabsList variant="line" className="result-tab-list"><TabsTrigger value="overview">命盘总览</TabsTrigger><TabsTrigger value="analysis">八字分析</TabsTrigger><TabsTrigger value="details">五行藏干</TabsTrigger><TabsTrigger value="luck">大运流年</TabsTrigger><TabsTrigger value="ziwei">紫微斗数</TabsTrigger><TabsTrigger value="qimen">奇门遁甲</TabsTrigger><TabsTrigger className="synthesis-trigger" value="synthesis">综合解读</TabsTrigger></TabsList>
+          <Tabs value={activeTab} onValueChange={value=>setActiveTab(String(value))} className="result-tabs">
+            <TabsList variant="line" className="result-tab-list"><TabsTrigger value="overview">命盘总览</TabsTrigger><TabsTrigger value="analysis">八字分析</TabsTrigger><TabsTrigger value="details">五行藏干</TabsTrigger><TabsTrigger value="luck">大运流年</TabsTrigger><TabsTrigger value="ziwei">紫微斗数</TabsTrigger><TabsTrigger value="qimen">奇门遁甲</TabsTrigger><TabsTrigger value="synthesis">综合解读</TabsTrigger><TabsTrigger value="archives">命盘档案</TabsTrigger><TabsTrigger value="export">报告导出</TabsTrigger></TabsList>
             <TabsContent value="ziwei" keepMounted><ZiweiPanel result={result} data={currentZiwei} targetDate={ziweiDate} algorithm={ziweiAlgorithm} locked={refreshing} onDateChange={(v)=>{setPickedZiweiDate(v);if (/^\d{4}-\d{2}-\d{2}$/.test(v)) changeYear(Number(v.slice(0,4)));}} onAlgorithmChange={setZiweiAlgorithm} onResult={(data) => setZiweiSnapshot(data ? {birthKey,data} : null)} /></TabsContent>
             <TabsContent value="qimen" keepMounted><QimenPanel data={currentQimen} time={qimenTime} onTimeChange={setQimenTime} locked={refreshing} onResult={setQimenSnapshot} /></TabsContent>
             <TabsContent value="synthesis" keepMounted><SynthesisPanel key={birthKey} result={result} year={year} ziwei={currentZiwei} qimen={currentQimen} refreshToken={refreshToken} /></TabsContent>
             <TabsContent value="overview" className="overview-panels"><ChartSheet result={result} isExample={isExample} onCopy={copy} /><LuckOverview result={result} now={now} /></TabsContent>
             <TabsContent value="analysis" keepMounted><BaziEnhancement key={birthKey} result={result} year={year} onYearChange={changeYear} refreshToken={refreshToken} /></TabsContent>
-            <TabsContent value="luck" keepMounted><LuckExplorer key={JSON.stringify(result.input)} result={result} now={now} sharedYear={year} onYearChange={changeYear} /></TabsContent>
+            <TabsContent value="luck" keepMounted><LuckTimeline result={result} year={year} onSelect={value=>{setTimelineEnabled(true);changeYear(value);}} busy={refreshing||timelineBusy} message={timelineMessage}/><LuckExplorer key={JSON.stringify(result.input)} result={result} now={now} sharedYear={year} onYearChange={changeYear} /></TabsContent>
+            <TabsContent value="export"><ReportPanel result={result} year={year} ziwei={currentZiwei} qimen={currentQimen} draftChanged={draftChanged}/></TabsContent>
+            <TabsContent value="archives" keepMounted><ArchivePanel result={result} onLoad={restore} draftChanged={draftChanged}/></TabsContent>
             <TabsContent value="details">
 
           <section className="panel"><h3 className="section-title"><TermHelp term="藏干" />与<TermHelp term="十神" /></h3><Table><TableHeader><TableRow><TableHead>柱位</TableHead><TableHead>干支</TableHead><TableHead>藏干 · 五行 · 十神</TableHead></TableRow></TableHeader><TableBody>{result.pillars.flatMap((options, i) => options.map((p) => <TableRow key={`${i}-${p.value}`}><TableCell>{labels[i]}</TableCell><TableCell>{p.value}</TableCell><TableCell className="whitespace-normal leading-7">{p.hidden.map((h) => <span key={h.gan} className="mr-3 inline-block">{h.gan}{h.element} · <TermHelp term={h.tenGod} /></span>)}</TableCell></TableRow>))}</TableBody></Table>
