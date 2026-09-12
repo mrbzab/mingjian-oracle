@@ -27,3 +27,21 @@ export function filterArchives(items:ChartArchive[],query:string,group:string) {
  const term=query.trim().toLocaleLowerCase();
  return items.filter(v=>(!group||v.group===group)&&(!term||[v.title,v.group,v.note,v.input.name,`${v.input.year}/${v.input.month}/${v.input.day}`].join(' ').toLocaleLowerCase().includes(term)));
 }
+
+// Validate the entire backup before merging; never overwrite an existing archive.
+export function mergeArchives(current:ArchiveStore,incoming:ArchiveStore,newId:()=>string=()=>crypto.randomUUID()) {
+ const validated=readArchives(JSON.stringify(incoming),null);
+ const signature=({id,...record}:ChartArchive)=>JSON.stringify(record);
+ const signatures=new Set(current.items.map(signature));
+ const ids=new Set(current.items.map(v=>v.id));
+ const additions:ChartArchive[]=[];let skipped=0,conflicts=0;
+ for(const item of validated.items){
+  const sig=signature(item);
+  if(signatures.has(sig)){skipped++;continue;}
+  let id=item.id;
+  if(ids.has(id)){id=newId();if(ids.has(id)||!id)throw Error('无法生成唯一档案编号，请重试。');conflicts++;}
+  ids.add(id);signatures.add(sig);additions.push({...item,id});
+ }
+ if(current.items.length+additions.length>500)throw Error('合并后超过 500 份档案，本次未导入。请先整理档案。');
+ return {store:{version:2 as const,items:[...additions,...current.items]},added:additions.length,skipped,conflicts};
+}

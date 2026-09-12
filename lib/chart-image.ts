@@ -12,5 +12,5 @@ export async function downloadChartImage(report:ChartReport) {
  const rules=report.sections.find(s=>s.title==='计算口径');if(rules)for(const text of rules.lines.slice(0,2))y=wrap(text,70,y+6,1060,24);
  line('命笺 · 四柱图片',70,1005,25,'#943e32');line('岁运及完整资料请使用报告的打印 / PDF 导出。',70,1050,23,'#646873');
  const blob=await new Promise<Blob>((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(Error('图片生成失败，请重试。')),'image/png'));
- const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='命笺-四柱命盘.png';a.click();return url;
+ return URL.createObjectURL(blob);
 }

@@ -38,3 +38,17 @@ test('private report excludes raw birth identifiers even with detailed Ziwei; mi
  const unknown=buildChartReport(calculateBaZi({...input,unknownTime:true}),2032,null,null,opts);
  assert.equal(unknown.pillars[3].value,'未知');
 });
+
+test('backup merge skips repeats, preserves conflicting records and rejects capacity overflow atomically',async()=>{
+ const {mergeArchives}=await import('../lib/chart-archives.ts');
+ const current=readArchives(null,JSON.stringify([{id:'a',input}]));
+ assert.equal(mergeArchives(current,current).added,0);
+ const changed={version:2,items:[{...current.items[0],note:'different'}]};
+ const merged=mergeArchives(current,changed,()=> 'b');
+ assert.equal(merged.conflicts,1);assert.equal(merged.store.items.length,2);
+ assert.equal(merged.store.items.find(v=>v.id==='a').note,'');
+ assert.equal(mergeArchives(merged.store,changed).added,0);
+ const full={version:2,items:Array.from({length:500},(_,i)=>({...current.items[0],id:String(i),note:String(i)}))};
+ assert.throws(()=>mergeArchives(full,changed),/500/);
+ assert.equal(full.items.length,500);
+});
