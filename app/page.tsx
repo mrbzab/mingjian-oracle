@@ -145,6 +145,7 @@ export default function Home() {
     } catch (e) { setError(e instanceof Error ? e.message : '排盘未完成，请检查出生资料。'); }
   }
   function restore(saved: BirthInput) {
+    if(refreshing)return;
     try { const next = calculateBaZi(saved); shouldReveal.current = true; setActiveTab('overview'); setFormCollapsed(true); setZiweiSnapshot(null); setResult(next); setInput(saved); setIsExample(false); setError(''); setNow(beijingNow()); }
     catch { setError('此记录无效或不适用于当前规则，请重新填写。'); }
   }
@@ -214,8 +215,8 @@ export default function Home() {
             <TabsContent value="overview" className="overview-panels"><ChartSheet result={result} isExample={isExample} onCopy={copy} /><LuckOverview result={result} now={now} /></TabsContent>
             <TabsContent value="analysis" keepMounted><BaziEnhancement key={birthKey} result={result} year={year} onYearChange={changeYear} refreshToken={refreshToken} /></TabsContent>
             <TabsContent value="luck" keepMounted><LuckTimeline result={result} year={year} onSelect={value=>{setTimelineEnabled(true);changeYear(value);}} busy={refreshing||timelineBusy} message={timelineMessage}/><LuckExplorer key={JSON.stringify(result.input)} result={result} now={now} sharedYear={year} onYearChange={changeYear} /></TabsContent>
-            <TabsContent value="compare"><TimeComparisonPanel key={birthKey} result={result} targetDate={ziweiDate} algorithm={ziweiAlgorithm} draftChanged={draftChanged} onUse={restore}/></TabsContent><TabsContent value="export"><ReportPanel result={result} year={year} ziwei={currentZiwei} qimen={currentQimen} draftChanged={draftChanged}/></TabsContent>
-            <TabsContent value="archives" keepMounted><ArchivePanel result={result} onLoad={restore} draftChanged={draftChanged}/></TabsContent>
+            <TabsContent value="compare"><TimeComparisonPanel key={birthKey} result={result} targetDate={ziweiDate} algorithm={ziweiAlgorithm} draftChanged={draftChanged} locked={refreshing} onUse={restore}/></TabsContent><TabsContent value="export"><ReportPanel result={result} year={year} ziwei={currentZiwei} qimen={currentQimen} draftChanged={draftChanged}/></TabsContent>
+            <TabsContent value="archives" keepMounted><ArchivePanel result={result} onLoad={restore} draftChanged={draftChanged} locked={refreshing}/></TabsContent>
             <TabsContent value="details">
 
           <section className="panel"><h3 className="section-title"><TermHelp term="藏干" />与<TermHelp term="十神" /></h3><Table><TableHeader><TableRow><TableHead>柱位</TableHead><TableHead>干支</TableHead><TableHead>藏干 · 五行 · 十神</TableHead></TableRow></TableHeader><TableBody>{result.pillars.flatMap((options, i) => options.map((p) => <TableRow key={`${i}-${p.value}`}><TableCell>{labels[i]}</TableCell><TableCell>{p.value}</TableCell><TableCell className="whitespace-normal leading-7">{p.hidden.map((h) => <span key={h.gan} className="mr-3 inline-block">{h.gan}{h.element} · <TermHelp term={h.tenGod} /></span>)}</TableCell></TableRow>))}</TableBody></Table>

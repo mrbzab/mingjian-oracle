@@ -1,7 +1,15 @@
 import { Temporal } from '@js-temporal/polyfill';
 import type { BaZiResult } from './bazi';
 
-export async function calculateZiwei(result: BaZiResult, algorithm: 'default' | 'zhongzhou' = 'default', targetDate?: string) {
+// iztro stores school configuration globally. Keep chart and horoscope generation
+// within one queue entry, including the async library load.
+let ziweiQueue: Promise<unknown> = Promise.resolve();
+export function calculateZiwei(result: BaZiResult, algorithm: 'default' | 'zhongzhou' = 'default', targetDate?: string) {
+  const request = ziweiQueue.then(() => calculateZiweiIsolated(result, algorithm, targetDate));
+  ziweiQueue = request.catch(() => undefined);
+  return request;
+}
+async function calculateZiweiIsolated(result: BaZiResult, algorithm: 'default' | 'zhongzhou', targetDate?: string) {
   if (result.input.unknownTime || !result.clockDate) throw new Error('紫微排盘需要出生时刻，请先补充出生资料并重新排盘。');
   if (result.input.gender === 'unknown') throw new Error('紫微排盘需要男命／女命口径，请先在出生资料中选择并重新排盘。');
   if (!['default', 'zhongzhou'].includes(algorithm)) throw new Error('紫微流派无效。');

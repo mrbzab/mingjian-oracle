@@ -22,3 +22,12 @@ Fixes: removed obstructive sticky context placement; used dialog finalFocus inst
 - Verified topic switch, material generation and invalidation after switching topics. At a 390x844 viewport the synthesis page has no horizontal document overflow (client/scroll width both 375 CSS px). No captured console errors in the tested flows.
 - Regression tests cover opt-in Qimen missing statuses, transformation palace differences and hiding birth-boundary timestamps in exported reports.
 - Validation: 76 tests passed; TypeScript check and production build passed. Browser coverage is local Chromium; no physical device/Safari claim.
+
+## Reliability completion pass — 2026-09-13
+
+- Reproduced parallel Ziwei school contamination against sequential results; serialized the entire chart/horoscope transaction, with rejection recovery. Regression compares all result fields for both schools and multiple years.
+- Archives: normalized date search, canonical backup deduplication, strict timestamp types, cleared metadata after editing/deleting, cross-tab refresh, Web Locks for writes where available with conflict checks, and non-overwriting undo merge.
+- Browser: synthetic archive save/edit/search/backup-link/delete/undo passed. Two local tabs reflected deletion and restoration without reloading. All newly created QA records were removed; pre-existing archives retained. Verified lock-backed save/delete/undo after final change.
+- Reports: separate natal/decadal/yearly transformations; measured variable-height PNG layout; stale PNG/TXT links disappear on birth draft edits. Browser confirmed generated PNG loads at 1200x1100 for default content and TXT link generation. Long content layout regression verifies canvas/card/footer bounds.
+- Loading: stale enhancement requests cannot clear newer busy state; archive loading and candidate adoption are blocked during one-click refresh.
+- Final validation: 81 tests passed, TypeScript check passed, production build passed. Tested browser flow had no captured console errors. This is a bounded regression audit, not proof of zero latent bugs or cross-device/Safari compatibility.

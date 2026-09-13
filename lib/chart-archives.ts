@@ -12,7 +12,7 @@ export function readArchives(raw:string|null,legacy:string|null):ArchiveStore {
  const items=source.map((item):ChartArchive=>{
   if(!item||typeof item.id!=='string'||!item.id||ids.has(item.id))throw Error('档案编号无效，原始数据未改动。');
   ids.add(item.id);const input=calculateBaZi(item.input).input;
-  if(raw && (typeof item.title!=='string'||item.title.length>60||typeof item.group!=='string'||item.group.length>30||typeof item.note!=='string'||item.note.length>3000||!Number.isFinite(Date.parse(item.createdAt))||!Number.isFinite(Date.parse(item.updatedAt))))throw Error('档案内容无效，原始数据未改动。');
+  if(raw && (typeof item.title!=='string'||item.title.length>60||typeof item.group!=='string'||item.group.length>30||typeof item.note!=='string'||item.note.length>3000||typeof item.createdAt!=='string'||typeof item.updatedAt!=='string'||!Number.isFinite(Date.parse(item.createdAt))||!Number.isFinite(Date.parse(item.updatedAt))))throw Error('档案内容无效，原始数据未改动。');
   return raw?{id:item.id,title:item.title,group:item.group,note:item.note,input,createdAt:item.createdAt,updatedAt:item.updatedAt}:{id:item.id,title:input.name.trim()||'未署名命盘',group:'历史记录',note:'',input,createdAt:'1970-01-01T00:00:00.000Z',updatedAt:'1970-01-01T00:00:00.000Z'};
  });
  return {version:2,items};
@@ -24,14 +24,16 @@ export function saveArchive(store:ArchiveStore,item:ChartArchive):ArchiveStore {
  return readArchives(JSON.stringify(next),null);
 }
 export function filterArchives(items:ChartArchive[],query:string,group:string) {
- const term=query.trim().toLocaleLowerCase();
- return items.filter(v=>(!group||v.group===group)&&(!term||[v.title,v.group,v.note,v.input.name,`${v.input.year}/${v.input.month}/${v.input.day}`].join(' ').toLocaleLowerCase().includes(term)));
+ const normalize=(value:string)=>value.toLocaleLowerCase().replace(/(\d{4})[-/年](\d{1,2})[-/月](\d{1,2})日?/g,(_,y,m,d)=>`${y}/${Number(m)}/${Number(d)}`);
+ const term=normalize(query.trim());
+ return items.filter(v=>(!group||v.group===group)&&(!term||normalize([v.title,v.group,v.note,v.input.name,`${v.input.year}/${v.input.month}/${v.input.day}`].join(' ')).includes(term)));
 }
 
 // Validate the entire backup before merging; never overwrite an existing archive.
 export function mergeArchives(current:ArchiveStore,incoming:ArchiveStore,newId:()=>string=()=>crypto.randomUUID()) {
  const validated=readArchives(JSON.stringify(incoming),null);
- const signature=({id,...record}:ChartArchive)=>JSON.stringify(record);
+ const stable=(value:unknown):unknown=>value&&typeof value==='object'?Object.fromEntries(Object.entries(value).sort(([a],[b])=>a.localeCompare(b)).map(([key,item])=>[key,stable(item)])):value;
+ const signature=({id,...record}:ChartArchive)=>JSON.stringify(stable(record));
  const signatures=new Set(current.items.map(signature));
  const ids=new Set(current.items.map(v=>v.id));
  const additions:ChartArchive[]=[];let skipped=0,conflicts=0;

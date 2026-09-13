@@ -28,7 +28,7 @@ export function BaziEnhancement({ result, year, onYearChange, refreshToken = 0 }
   const complete = !result.input.unknownTime && result.pillars.every((p) => p.length === 1);
 
   const generation=useRef(0);
-  useEffect(()=>{generation.current++;return()=>{generation.current++;};},[inputKey,result]);
+  useEffect(()=>{generation.current++;setBusy(false);setNotice('');setError('');return()=>{generation.current++;};},[inputKey,result]);
   async function generate() {
     const request=++generation.current;
     setBusy(true); setError(''); setNotice('');
@@ -42,7 +42,7 @@ export function BaziEnhancement({ result, year, onYearChange, refreshToken = 0 }
       setPrompt(engine.buildInterpretationPrompt(formatReport(result), next, question, nextContext, { claim: claim.trim(), observation: observation.trim() }));
       setGeneratedInputs(inputKey);
     } catch (e) { if(request===generation.current)setError(e instanceof Error ? e.message : '增强分析暂时无法生成，请重试。'); }
-    finally { setBusy(false); }
+    finally { if(request===generation.current)setBusy(false); }
   }
 
   useEffect(() => { if(refreshToken && complete) void generate(); }, [refreshToken]);
