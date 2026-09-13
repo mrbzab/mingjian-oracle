@@ -45,5 +45,21 @@ test('birth-year private export redacts the new birth-boundary cut',async()=>{
  const r=calculateBaZi(input);
  const report=buildChartReport(r,1996,null,null,{birth:false,details:true,ziwei:false,qimen:false});
  assert.ok(!JSON.stringify(report).includes(r.date));
- assert.ok(JSON.stringify(report).includes('出生日期已隐藏'));
+ assert.ok(JSON.stringify(report).includes('出生时刻已隐藏'));assert.ok(!JSON.stringify(report).includes(input.time));
+});
+
+test('Qimen missing status follows opt-in and question selection',async()=>{
+ const {buildSynthesis}=await import('../lib/synthesis.ts');const r=calculateBaZi(input);
+ const off=await buildSynthesis(r,2026,null,null,'问题');
+ assert.ok(off.missing.every(m=>!m.startsWith('奇门')));
+ const noQuestion=await buildSynthesis(r,2026,null,null,'','career',true);
+ assert.ok(noQuestion.missing.includes('奇门：请填写具体问题。'));
+ const noChart=await buildSynthesis(r,2026,null,null,'问题','career',true);
+ assert.ok(noChart.missing.some(m=>m.startsWith('奇门：尚未')));
+});
+test('same annual transformations with different natal palaces are not labeled identical',async()=>{
+ const data=await compareBirthTimes(input,'09:00:00','11:00:00','2026-07-01');
+ assert.deepEqual(data.candidates[0].ziwei.horoscope.yearly.mutagen,data.candidates[1].ziwei.horoscope.yearly.mutagen);
+ const yearly=data.palaceRows.find(r=>r.label==='所选日期流年');
+ assert.equal(yearly.changed,true);assert.ok(yearly.a.includes('→ 本命'));
 });

@@ -14,8 +14,8 @@ export function SynthesisPanel({result,year,ziwei,qimen,refreshToken=0}:{result:
  const summary=useMemo(()=>summarizeSynthesis(result,year,ziwei,qimen),[result,year,ziwei,qimen]);
  const key=JSON.stringify({input:result.input,year,ziwei,qimen,question,topic,includeQimen}),stale=!!prompt&&snapshot!==key;
  const generation=useRef(0);
- useEffect(()=>{generation.current++;return()=>{generation.current++;};},[key]);
- async function generate(){const request=++generation.current;setBusy(true);setError('');try{const {buildSynthesis}=await import('@/lib/synthesis');const next=await buildSynthesis(result,year,ziwei,qimen,question,topic,includeQimen);if(request!==generation.current)return;setPrompt(next.prompt);setSnapshot(key);setNotice('完整综合资料已生成。');}catch(e){if(request===generation.current)setError(e instanceof Error?e.message:'生成失败。');}finally{setBusy(false);}}
+ useEffect(()=>{generation.current++;setBusy(false);setNotice('');return()=>{generation.current++;};},[key]);
+ async function generate(){const request=++generation.current;setBusy(true);setError('');try{const {buildSynthesis}=await import('@/lib/synthesis');const next=await buildSynthesis(result,year,ziwei,qimen,question,topic,includeQimen);if(request!==generation.current)return;setPrompt(next.prompt);setSnapshot(key);setNotice('完整综合资料已生成。');}catch(e){if(request===generation.current)setError(e instanceof Error?e.message:'生成失败。');}finally{if(request===generation.current)setBusy(false);}}
  useEffect(()=>{if(refreshToken)void generate();},[refreshToken]);
  async function copy(){try{await navigator.clipboard.writeText(prompt);setNotice('综合提示词已复制。');}catch{setNotice('请在下方文本框中全选并复制。');}}
  return <section className="panel space-y-6"><TopicReading result={result} year={year} ziwei={ziwei} qimen={qimen} topic={topic} onTopic={setTopic} question={question} includeQimen={includeQimen} onQimen={setIncludeQimen}/><details className="border-t pt-4"><summary className="cursor-pointer font-medium">查看各体系原始摘要</summary><div><h3 className="section-title">综合解读摘要</h3><p className="leading-7 text-muted-foreground">根据当前有效命盘整理，摘要随资料同步；各体系的来源和时间范围分别列出。</p></div>

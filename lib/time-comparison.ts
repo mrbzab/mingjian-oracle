@@ -14,7 +14,7 @@ export async function compareBirthTimes(input:BirthInput,timeA:string,timeB:stri
  if(a.ziwei&&b.ziwei){
   const describe=(z:ZiweiResult,name:string)=>{const p=z.chart.palaces.find(p=>p.name===name);return p?p.heavenlyStem+p.earthlyBranch+' · '+[...p.majorStars,...p.minorStars].map(s=>s.name+(s.mutagen?'化'+s.mutagen:'')).join('、'):'未提供';};
   for(const p of a.ziwei.chart.palaces)palaceRows.push(row(p.name,describe(a.ziwei,p.name),describe(b.ziwei,p.name)));
-  const scope=(z:ZiweiResult,key:'decadal'|'yearly')=>{const s=z.horoscope?.[key];return s?s.heavenlyStem+s.earthlyBranch+' · '+s.mutagen.map((name,i)=>name+'化'+['禄','权','科','忌'][i]).join('、'):'未生成';};
+  const scope=(z:ZiweiResult,key:'decadal'|'yearly')=>{const s=z.horoscope?.[key];return s?s.heavenlyStem+s.earthlyBranch+' · '+s.mutagen.map((name,i)=>{const p=z.chart.palaces.find(p=>[...p.majorStars,...p.minorStars].some(star=>star.name===name));return name+'化'+['禄','权','科','忌'][i]+' → '+(p?'本命'+p.name+' '+p.earthlyBranch+' / '+s.name+s.palaceNames[p.index]:'未定位');}).join('、'):'未生成';};
   palaceRows.push(row('所选日期大限',scope(a.ziwei,'decadal'),scope(b.ziwei,'decadal')),row('所选日期流年',scope(a.ziwei,'yearly'),scope(b.ziwei,'yearly')));
  }
  return {candidates,rows,palaceRows,targetDate,algorithm,changedPillars:rows.slice(0,4).filter(r=>r.changed).length};
