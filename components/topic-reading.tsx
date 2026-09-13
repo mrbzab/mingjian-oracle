@@ -1,0 +1,16 @@
+'use client';
+import {TOPICS,buildTopicReading,type Topic} from '@/lib/topic-reading';
+import type {BaZiResult} from '@/lib/bazi';
+import type {ZiweiResult,QimenResult} from '@/lib/metaphysics';
+import {Button} from '@/components/ui/button';
+import {Checkbox} from '@/components/ui/checkbox';
+import {Label} from '@/components/ui/label';
+export function TopicReading({result,year,ziwei,qimen,topic,onTopic,question,includeQimen,onQimen}:{result:BaZiResult;year:number;ziwei:ZiweiResult|null;qimen:QimenResult|null;topic:Topic;onTopic:(v:Topic)=>void;question:string;includeQimen:boolean;onQimen:(v:boolean)=>void}){
+ const data=buildTopicReading(result,year,ziwei,qimen,topic,question,includeQimen);
+ return <div className="space-y-5"><div><h3 className="section-title">专题综合解读</h3><p className="text-sm leading-7 text-muted-foreground">按主题解释已计算的盘面线索，展开查看依据。日期与各体系口径分别保留。</p></div><div className="flex flex-wrap gap-2" role="group" aria-label="解读专题">{(Object.keys(TOPICS) as Topic[]).map(t=><Button key={t} variant={topic===t?'default':'outline'} aria-pressed={topic===t} onClick={()=>onTopic(t)}>{TOPICS[t].title}</Button>)}</div><p className="rounded-xl bg-muted p-4 leading-7">{data.overview}</p>
+ <details open className="rounded-xl border p-4"><summary className="cursor-pointer font-medium">八字依据 · {data.bazi.length} 条</summary><div className="mt-4 space-y-3">{data.bazi.map((e,i)=><div key={i}><p className="font-medium">{e.source}</p><p className="text-sm leading-7 text-muted-foreground">{e.reading}。</p></div>)}{!data.bazi.length&&<p>未检出可列出的主题依据，请先核对出生资料。</p>}</div></details>
+ <details className="rounded-xl border p-4"><summary className="cursor-pointer font-medium">紫微宫位与四化 · {data.ziweiDate??'暂无运限日期'}</summary><div className="mt-4 space-y-4">{data.palaces.map(p=><div key={p.name}><h4 className="font-medium">{p.name} · {p.stars}</h4><p className="text-sm leading-7">三方四正：{p.surrounded}</p>{(['natal','decadal','yearly'] as const).map((scope,i)=><p key={scope} className="text-sm leading-7">{['本命','大限','流年'][i]}四化落入本宫：{p[scope].map(r=>r.star+'化'+r.transformation).join('、')||'未检出'}</p>)}</div>)}{!data.palaces.length&&<p>请先更新紫微命盘。</p>}</div></details>
+ <details className="rounded-xl border p-4"><summary className="cursor-pointer font-medium">{year} 年适用时段与主题关系</summary><div className="mt-3 space-y-4">{data.timing.map(s=><div key={s.start}><h4 className="font-medium">{s.luck??'无对应大运'}</h4><p className="text-sm leading-7">{s.start.replace('T',' ')} 至 {s.end.replace('T',' ')}（不含）</p><p className="text-sm leading-7">{s.note}</p>{s.relations.map((r,i)=><p key={i} className="mt-2 text-sm leading-7">{r.kind} · {r.nodes.map(n=>n.label+' '+n.value).join(' ↔ ')}：{r.reading}</p>)}{!s.relations.length&&<p className="text-sm leading-7 text-muted-foreground">当前时段未检出相关关系。</p>}</div>)}</div></details>
+ <div className="flex items-center gap-3"><Checkbox id="topic-qimen" checked={includeQimen} onCheckedChange={onQimen}/><Label htmlFor="topic-qimen">将奇门用于下方具体问题</Label></div><p className="text-sm leading-7 text-muted-foreground">{data.qimenNote}</p>{data.qimen&&<div className="rounded-xl border p-4 text-sm leading-7"><p>{data.qimen.time} · {data.qimen.rules}</p>{data.qimen.patterns.map((p,i)=><p key={i}>{p}</p>)}</div>}
+</div>;
+}

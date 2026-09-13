@@ -34,7 +34,7 @@ test('synthesis reports missing systems and keeps separate time scopes',async()=
  const missing=await buildSynthesis(birth,2026,null,null,'对照');
  assert.equal(missing.missing.length,2);assert.equal(missing.data.ziwei,null);
  const z=await calculateZiwei(birth,'default','2026-07-01'),q=await calculateQimen('2026-09-05T12:00');
- const full=await buildSynthesis(birth,2026,z,q,'对照');
+ const full=await buildSynthesis(birth,2026,z,q,'对照','career',true);
  assert.equal(full.missing.length,0);assert.equal(full.data.ziwei.horoscope.date,'2026-07-01');
  assert.equal(full.data.qimen.time,'2026-09-05T12:00:00');
  assert.ok(full.prompt.length<120000);

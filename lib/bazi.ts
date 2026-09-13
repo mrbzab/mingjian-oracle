@@ -64,7 +64,7 @@ export function equationOfTime(date: Temporal.PlainDateTime) {
 }
 
 function moment(input: BirthInput, date: Temporal.PlainDate, time: string) {
-  if (!/^\d{2}:\d{2}(:\d{2})?$/.test(time)) throw new Error('请输入有效出生时刻，格式为 时:分 或 时:分:秒。');
+  if (typeof time !== 'string' || !/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/.test(time)) throw new Error('请输入有效出生时刻，格式为 时:分 或 时:分:秒。');
   let plain: Temporal.PlainDateTime;
   try { plain = date.toPlainDateTime(Temporal.PlainTime.from(time, { overflow: 'reject' })); }
   catch { throw new Error('出生时刻不存在。小时为 0–23，分秒为 0–59。'); }
@@ -111,6 +111,7 @@ export function describePillar(value: string, dayMaster: string | null, index = 
 }
 
 export function calculateBaZi(input: BirthInput) {
+  if (!input || typeof input !== 'object') throw new Error('出生资料格式无效，请重新填写。');
   if (typeof input.name !== 'string' || input.name.length > 30 || typeof input.city !== 'string' || input.city.length > 60 || typeof input.unknownTime !== 'boolean' || typeof input.leap !== 'boolean') throw new Error('出生资料格式无效，请重新填写。');
   if (!['+08:00', 'Asia/Shanghai'].includes(input.timezone)) throw new Error('当前版本仅支持北京时间及中国历史时区。');
   if (!['beijing', 'apparent'].includes(input.clock) || ![1, 2].includes(input.daySect) || ![1, 2].includes(input.yunSect)) throw new Error('排盘规则无效。');

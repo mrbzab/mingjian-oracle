@@ -39,7 +39,7 @@ export function ziweiPalaceEvidence(data: ZiweiResult, index: number) {
 }
 
 export async function calculateQimen(localDateTime: string) {
-  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/.test(localDateTime)) throw new Error('请填写完整的起局日期与时刻。');
+  if (!/^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/.test(localDateTime)) throw new Error('请填写完整的起局日期与时刻。');
   const time = Temporal.PlainDateTime.from(localDateTime, { overflow: 'reject' });
   if (time.year < 1901 || time.year > 2099) throw new Error('起局年份须在 1901–2099 年之间。');
   const [{ generateQimen }, { TimeManager }] = await Promise.all([import('mingyu-core/divination/qimen'), import('mingyu-core/calendar')]);
